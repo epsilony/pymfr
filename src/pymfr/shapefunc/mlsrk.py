@@ -77,7 +77,8 @@ class MLSRK:
         self.gammas = None
         self.Bs = None
         self._Bs = None
-        self._t_vec=None
+        self._kernel_size_t_vec=None
+        self._nodes_size_t_vec=None
         self.spatial_dim = spatial_dim
         self.partial_order = partial_order
         
@@ -129,8 +130,10 @@ class MLSRK:
             out = np.empty((partial_size,nodes_size))
         gamma.dot(Bs[0], out=out[0])
         
-        t=self._t_vec
-        
+        t=self._kernel_size_t_vec
+        t2=(self._nodes_size_t_vec[:nodes_size] 
+            if nodes_size!= self._nodes_size_t_vec.shape[0] 
+            else self._nodes_size_t_vec)
         for j in range(1, partial_size):
             
             gamma_j = gammas[j]
@@ -141,7 +144,8 @@ class MLSRK:
             gamma_j -= t
             
             gamma_j = cho_solve(cl, gamma_j, overwrite_b=True)
-            t2=gamma_j.dot(Bs[0])
+            
+            t2=gamma_j.dot(Bs[0],out=t2)
             
             out_j = out[j]
             gamma.dot(Bs[j], out=out_j)
@@ -172,8 +176,11 @@ class MLSRK:
             for j in range(partial_size):
                 Bs[j]=_Bs[j][:,:nodes_size] 
         
-        if self._t_vec is None or self._t_vec.shape[0] !=kernel_size:
-            self._t_vec=np.empty((kernel_size,)) 
+        if self._kernel_size_t_vec is None or self._kernel_size_t_vec.shape[0] !=kernel_size:
+            self._kernel_size_t_vec=np.empty((kernel_size,)) 
+        
+        if self._nodes_size_t_vec is None or self._nodes_size_t_vec.shape[0] <nodes_size:
+            self._nodes_size_t_vec=np.empty((nodes_size,))
         
         if gammas is None or len(gammas) < partial_size or gammas[0].shape != (kernel_size,):
             gammas = np.zeros((partial_size,kernel_size))
@@ -191,7 +198,6 @@ class MLSRK:
         self._spatial_dim = spatial_dim
         self.kernel.spatial_dim = spatial_dim
         self.weight_func.spatial_dim = spatial_dim
-            #self._del_matrice()
     
     @property
     def partial_order(self):
@@ -202,7 +208,6 @@ class MLSRK:
         if value < 0 or value > 1:
             raise ValueError('only supports partial_order 0 or 1')
         self._partial_order = value
-        #self._del_matrice()
     
 
         
