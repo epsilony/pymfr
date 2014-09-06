@@ -11,9 +11,9 @@ class PolynomialKernel:
     
     def __init__(self, order=1, spatial_dim=2, partial_order=1):
         self._kernels = (PolynomialKernel1D(), PolynomialKernel2D())
-        self._kernel=self._kernels[spatial_dim-1]
-        self._kernel.order=order
-        self._kernel.partial_order=partial_order
+        self._kernel = self._kernels[spatial_dim - 1]
+        self._kernel.order = order
+        self._kernel.partial_order = partial_order
         self.spatial_dim = spatial_dim
         self._is_linear_transformable = True
         
@@ -39,8 +39,8 @@ class PolynomialKernel:
     def __call__(self, x):
         return self._kernel(x)
 
-for proxied in ('order','partial_order','size'):
-    setattr(PolynomialKernel,proxied,FieldProxy('_kernel',proxied))
+for proxied in ('order', 'partial_order', 'size'):
+    setattr(PolynomialKernel, proxied, FieldProxy('_kernel', proxied))
 
 class _PolynomialKernelBase:
     
@@ -102,7 +102,7 @@ class PolynomialKernel1D(_PolynomialKernelBase):
         
     def __call__(self, x, out=None):
         if not out:
-            out = np.empty((self.partial_size(),self.size))
+            out = np.empty((self.partial_size(), self.size))
         magic = 2
         calc = self._calcs[(self.order - 1) * magic + self.partial_order]
         calc(x, out)
@@ -143,7 +143,7 @@ class PolynomialKernel2D(_PolynomialKernelBase):
         
     def __call__(self, x, out=None):
         if not out:
-            out = np.empty((self.partial_size(),self.size))
+            out = np.empty((self.partial_size(), self.size))
         magic = 2
         calc = self._calcs[(self.order - 1) * magic + self.partial_order]
         calc(x, out)

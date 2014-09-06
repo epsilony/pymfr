@@ -77,8 +77,8 @@ class MLSRK:
         self.gammas = None
         self.Bs = None
         self._Bs = None
-        self._kernel_size_t_vec=None
-        self._nodes_size_t_vec=None
+        self._kernel_size_t_vec = None
+        self._nodes_size_t_vec = None
         self.spatial_dim = spatial_dim
         self.partial_order = partial_order
         
@@ -107,7 +107,7 @@ class MLSRK:
             B.fill(0)
         gammas = self.gammas
         
-        m = np.empty((kernel_size,kernel_size))
+        m = np.empty((kernel_size, kernel_size))
 
         for i in range(nodes_size):
             coord = node_coords[i]
@@ -135,16 +135,16 @@ class MLSRK:
         
         cl = cho_factor(As[0])
         gamma = gammas[0]
-        np.copyto(gamma,ps[0])
+        np.copyto(gamma, ps[0])
         gamma = cho_solve(cl, gamma, overwrite_b=True)
         
         if not out:
-            out = np.empty((partial_size,nodes_size))
+            out = np.empty((partial_size, nodes_size))
         gamma.dot(Bs[0], out=out[0])
         
-        t=self._kernel_size_t_vec
-        t2=(self._nodes_size_t_vec[:nodes_size] 
-            if nodes_size!= self._nodes_size_t_vec.shape[0] 
+        t = self._kernel_size_t_vec
+        t2 = (self._nodes_size_t_vec[:nodes_size] 
+            if nodes_size != self._nodes_size_t_vec.shape[0] 
             else self._nodes_size_t_vec)
         for j in range(1, partial_size):
             
@@ -157,7 +157,7 @@ class MLSRK:
             
             gamma_j = cho_solve(cl, gamma_j, overwrite_b=True)
             
-            t2=gamma_j.dot(Bs[0],out=t2)
+            t2 = gamma_j.dot(Bs[0], out=t2)
             
             out_j = out[j]
             gamma.dot(Bs[j], out=out_j)
@@ -170,36 +170,36 @@ class MLSRK:
         As = self.As
         gammas = self.gammas
         _Bs = self._Bs
-        Bs=self.Bs
+        Bs = self.Bs
         partial_size = self.partial_size()
         if As is None or len(As) < partial_size or As[0].shape[0] != kernel_size:
             As = [np.empty((kernel_size, kernel_size)) for _i in range(partial_size)]
             self.As = As
         
-        if _Bs is None or len(_Bs) < partial_size or _Bs[0].shape[0]!=kernel_size or _Bs[0].shape[1]<nodes_size:
+        if _Bs is None or len(_Bs) < partial_size or _Bs[0].shape[0] != kernel_size or _Bs[0].shape[1] < nodes_size:
             _Bs = [np.empty((kernel_size, nodes_size), order='F') for _i in range(partial_size)]
             self._Bs = _Bs
-            Bs=None
+            Bs = None
         
-        if Bs is None or len(Bs)< partial_size:
-            Bs=[_Bs[j][:,:nodes_size] for j in range(partial_size)]
-            self.Bs=Bs
-        elif Bs[0].shape!=(kernel_size,nodes_size):
+        if Bs is None or len(Bs) < partial_size:
+            Bs = [_Bs[j][:, :nodes_size] for j in range(partial_size)]
+            self.Bs = Bs
+        elif Bs[0].shape != (kernel_size, nodes_size):
             for j in range(partial_size):
-                Bs[j]=_Bs[j][:,:nodes_size] 
+                Bs[j] = _Bs[j][:, :nodes_size] 
         
-        if self._kernel_size_t_vec is None or self._kernel_size_t_vec.shape[0] !=kernel_size:
-            self._kernel_size_t_vec=np.empty((kernel_size,)) 
+        if self._kernel_size_t_vec is None or self._kernel_size_t_vec.shape[0] != kernel_size:
+            self._kernel_size_t_vec = np.empty((kernel_size,)) 
         
-        if self._nodes_size_t_vec is None or self._nodes_size_t_vec.shape[0] <nodes_size:
-            self._nodes_size_t_vec=np.empty((nodes_size,))
+        if self._nodes_size_t_vec is None or self._nodes_size_t_vec.shape[0] < nodes_size:
+            self._nodes_size_t_vec = np.empty((nodes_size,))
         
         if gammas is None or len(gammas) < partial_size or gammas[0].shape != (kernel_size,):
-            gammas = np.zeros((partial_size,kernel_size))
+            gammas = np.zeros((partial_size, kernel_size))
             self.gammas = gammas
 
     def partial_size(self):
-        return partial_size(self.spatial_dim, self.patial_order)
+        return partial_size(self.spatial_dim, self.partial_order)
 
     @property
     def spatial_dim(self):
@@ -220,7 +220,3 @@ class MLSRK:
         if value < 0 or value > 1:
             raise ValueError('only supports partial_order 0 or 1')
         self._partial_order = value
-    
-
-        
-        

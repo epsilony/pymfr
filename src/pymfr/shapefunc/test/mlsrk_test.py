@@ -24,7 +24,7 @@ class MLSRK_Test(unittest.TestCase):
 
 
     def test_partial_of_unity(self):
-        xs=[(-0.2,),(0.7,),(-1.8),(2.9)]
+        xs=[(-0.2,),(0.7,),(-1.8,),(2.9,)]
         coords=self._oned_uniform_coords()        
         spatial_dim=1
 
@@ -80,7 +80,7 @@ class MLSRK_Test(unittest.TestCase):
         xs.extend(xs2)
         for x in xs:
             x=np.array(x,dtype=float)
-            mlsrk.patial_order=1
+            mlsrk.partial_order=1
             filtered_indes=[i for i in node_indes if np.linalg.norm(x-coords[i])<radius[i]]
             inputed_coords=coords[filtered_indes]
             act=mlsrk.calc(x, inputed_coords, filtered_indes)
