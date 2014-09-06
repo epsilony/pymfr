@@ -15,6 +15,11 @@ class PolynomialKernel:
         self._kernel.order=order
         self._kernel.partial_order=partial_order
         self.spatial_dim = spatial_dim
+        self._is_linear_transformable = True
+        
+    @property
+    def is_linear_transformable(self):
+        return self._is_linear_transformable
     
     @property
     def spatial_dim(self):

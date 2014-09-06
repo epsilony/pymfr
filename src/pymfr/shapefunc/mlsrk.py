@@ -39,7 +39,7 @@ class MLSRK:
         >>>kernel.center=x
         >>>vals=kernel(y)
         
-        where vals.shape: (kernel_size,partial_size)
+        where vals.shape: (partial_size,kernel_size)
         
     As:
         moment matrix A and its partial derivatives
@@ -87,6 +87,9 @@ class MLSRK:
         kernel = self.kernel
         weight_func = self.weight_func
         kernel_size = kernel.size
+        kernel_linear_transformable = kernel.is_linear_transformable
+        if kernel_linear_transformable:
+            x_lt = np.empty((self.spatial_dim,))
         
         kernel.partial_order = 0
         weight_func.partial_order = self.partial_order
@@ -110,7 +113,12 @@ class MLSRK:
             coord = node_coords[i]
             index = node_indes[i]
             
-            p_i = kernel(coord)
+            if kernel_linear_transformable:
+                np.copyto(x_lt, coord)
+                x_lt -= x
+                p_i = kernel(x_lt)
+            else:
+                p_i = kernel(coord)
             np.dot(p_i.reshape((-1, 1)), p_i.reshape((1, -1)), m)
             
             weights = weight_func(x, index)
@@ -119,7 +127,11 @@ class MLSRK:
                 Bs[j][:, i] = p_i * weights[j]
         
         kernel.partial_order = self.partial_order
-        ps = kernel(x)
+        if kernel_linear_transformable:
+            x_lt.fill(0)
+            ps = kernel(x_lt)
+        else:
+            ps = kernel(x)
         
         cl = cho_factor(As[0])
         gamma = gammas[0]
