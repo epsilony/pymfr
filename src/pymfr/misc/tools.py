@@ -19,7 +19,7 @@ class FieldProxy:
         setattr(field, self.proxy_name, value)
         
 def ensure_sequence(obj):
-    return obj if isinstance(obj,Sequence) else list(obj)
+    return obj if isinstance(obj, Sequence) else list(obj)
 
 def twod_uniform_coords(xs, ys):
     xvs, yvs = np.meshgrid(xs, ys)
@@ -28,4 +28,30 @@ def twod_uniform_coords(xs, ys):
     coords[:, 0] = xvs.flat
     coords[:, 1] = yvs.flat
     
+    return coords
+
+def rand_coords(dst_range, num, rand=None, rand_range=None):
+    
+    if rand is None:
+        rand = np.random.rand
+        
+    coords = rand(num, dst_range.shape[1])
+    return trans_coords(coords,dst_range,rand_range)
+    
+def trans_coords(coords,dst_range,src_range=None):
+    if dst_range.ndim != 2 or dst_range.shape[0] != 2:
+        raise ValueError()
+    if src_range is None:
+        src_range = np.zeros_like(dst_range)
+        src_range[1].fill(1)
+    elif src_range.shape != dst_range.shape:
+        raise ValueError()
+    
+    r0 = src_range[0].reshape((1, -1))
+    r1 = src_range[1].reshape((1, -1))
+    
+    d0 = dst_range[0].reshape((1, -1))
+    d1 = dst_range[1].reshape((1, -1))
+    
+    coords = (coords - r0) / (r1 - r0) * (d1 - d0) + d0
     return coords

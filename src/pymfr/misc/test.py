@@ -8,6 +8,7 @@ from pymfr.misc.weight_func import TripleSpline, weight_function
 import numpy as np
 from pymfr.misc.kernel import PolynomialKernel
 import random
+from pymfr.misc.tools import trans_coords
 
 
 def test_partial_size():
@@ -130,6 +131,49 @@ def _test_poly_kernel(spatial_dim, x, order_partial_order_exp_iter):
         act = np.array(act, dtype=float)
         assert_almost_equal(np.linalg.norm(act - exp), 0)
 
+def test_trans_coords():
+    coords=np.array([
+         (0,0),
+         (0,1),
+         (0,0.5),
+         (0.5,0),
+         (0.5,0.5),
+         (0.7,0.3)           
+         ])
+    for dst_range,src_range,exps in [
+               (np.array([[0,0],[-2,1.5]]),None,
+                    np.array([
+                          (0,0),
+                          (0,1.5),
+                          (0,0.75),
+                          (-1,0),
+                          (-1,0.75),
+                          (-1.4,0.45)
+                          ])),
+                (np.array([[1,-0.5],[-3,1.5]]),None,
+                    np.array([
+                          (1,-0.5),
+                          (1,1.5),
+                          (1,0.5),
+                          (-1,-0.5),
+                          (-1,0.5),
+                          (-1.8,0.1)
+                              ])
+                 ),
+                 (np.array([[1,-0.5],[-3,1.5]]),np.array([[0.5,0.5],[-1.5,-2.5]]),
+                    np.array([
+                              (0,-0.5+1/3),
+                              (0,-0.5-2/6),
+                              (0,-0.5),
+                              (1,-0.5+2/6),
+                              (1,-0.5),
+                              (1.4,-0.5+2/15)
+                              ])
+                  ),
+                                      
+        ]:
+        acts=trans_coords(coords,dst_range,src_range)
+        assert_almost_equal(0,np.linalg.norm(exps-acts))
     
 if __name__ == '__main__':
     import nose
