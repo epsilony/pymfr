@@ -11,6 +11,7 @@ from pymfr.misc.kernel import PolynomialKernel
 from pymfr.misc.weight_func import WeightFunction, InfluencRadiusBasedNodeRegularDistance
 from pymfr.shapefunc.mlsrk import MLSRK
 import sympy as sm
+from pymfr.misc.tools import twod_uniform_coords
 
 
 class MLSRK_Test(unittest.TestCase):
@@ -47,7 +48,7 @@ class MLSRK_Test(unittest.TestCase):
         
         xs = np.linspace(-1, 9, 11)
         ys = np.linspace(-2.5, 8.5, 11)
-        coords = self._twod_uniform_coords(xs, ys)
+        coords = twod_uniform_coords(xs, ys)
         rads = np.empty(len(coords))
         spatial_dim = 2
         
@@ -61,7 +62,7 @@ class MLSRK_Test(unittest.TestCase):
         
         pts_xs = np.linspace(-0.7, 8.9, 3)
         pts_ys = np.linspace(-2.3, 8.1, 3)
-        pts = self._twod_uniform_coords(pts_xs, pts_ys)
+        pts = twod_uniform_coords(pts_xs, pts_ys)
         
         for order, rad, poly in [(1, 1.2, p1), (1, 1.3, p2), (2, 2.2, p3), (2, 2.2, p2), (3, 3.5, p4), (3, 3.5, p3), (3, 3.4, p2)]:
             rads.fill(rad)
@@ -114,13 +115,13 @@ class MLSRK_Test(unittest.TestCase):
     def test_partial_of_unity_uni_2d(self):
         xs = np.linspace(-1, 9, 9)
         ys = np.linspace(3, 13, 9)
-        coords = self._twod_uniform_coords(xs, ys)
+        coords = twod_uniform_coords(xs, ys)
         
         rads = np.empty(len(coords))
         
         pt_xs = np.linspace(-0.8, 8.8, 7)
         pt_ys = np.linspace(3.3, 12.6, 7)
-        pts = self._twod_uniform_coords(pt_xs, pt_ys)
+        pts = twod_uniform_coords(pt_xs, pt_ys)
         
         spatial_dim = 2
         
@@ -209,18 +210,6 @@ class MLSRK_Test(unittest.TestCase):
         res.fill(radius)
         return res
     
-    def _twod_uniform_coords(self, xs, ys):
-        xvs, yvs = np.meshgrid(xs, ys)
-        
-        coords = np.empty((xvs.size, 2))
-        coords[:, 0] = xvs.flat
-        coords[:, 1] = yvs.flat
-        
-        return coords
-        
-        
-    
-
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
