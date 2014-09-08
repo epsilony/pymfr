@@ -36,9 +36,9 @@ def rand_coords(dst_range, num, rand=None, rand_range=None):
         rand = np.random.rand
         
     coords = rand(num, dst_range.shape[1])
-    return trans_coords(coords,dst_range,rand_range)
+    return trans_coords(coords, dst_range, rand_range)
     
-def trans_coords(coords,dst_range,src_range=None):
+def trans_coords(coords, dst_range, src_range=None):
     if dst_range.ndim != 2 or dst_range.shape[0] != 2:
         raise ValueError()
     if src_range is None:
@@ -55,3 +55,32 @@ def trans_coords(coords,dst_range,src_range=None):
     
     coords = (coords - r0) / (r1 - r0) * (d1 - d0) + d0
     return coords
+
+def copy_to_2d(dst, i_indes, j_indes, src):
+    src_ndim = np.ndim(src)
+    if src_ndim == 0 or (src_ndim == 1 and len(src) == len(j_indes)):
+        for i in range(len(i_indes)):
+            dst[i_indes[i]][j_indes] = src
+    elif src_ndim == 2:
+        for i in range(len(i_indes)):
+            dst[i_indes[i]][j_indes] = src[i]
+    else:
+        raise ValueError()
+
+def add_to_2d(dst, i_indes, j_indes, src):
+    src_ndim = np.ndim(src)
+    if src_ndim == 0 or (src_ndim == 1 and len(src) == len(j_indes)):
+        for i in range(len(i_indes)):
+            dst[i_indes[i]][j_indes] += src
+    elif src_ndim == 2:
+        for i in range(len(i_indes)):
+            dst[i_indes[i]][j_indes] += src[i]
+    else:
+        raise ValueError()
+
+def _raw_assign_2d(dst, i_indes, j_indes, src):
+    for i in range(len(i_indes)):
+        for j in range(len(j_indes)):
+            dst[i_indes[i], j_indes[j]] = src[i][j]
+
+        
