@@ -9,27 +9,30 @@ from pymfr.misc.tools import ensure_sequence
 from numpy.linalg import norm
 from numbers import Number
 from collections import Callable
-from math import ceil
+from math import ceil, sqrt
 import sys
     
 def _max_len(segments):
     return max(norm(segment.end.coord - segment.start.coord) for segment in segments)
+
+def norm_2d(vec2d):
+    return sqrt(vec2d[0]*vec2d[0]+vec2d[1]*vec2d[1])
 
 def _distance_to_seg(x, seg):
     start = seg.start.coord
     end = seg.end.coord
     u = end - start
     v = x - start
-    norm_u = norm(u)
+    norm_u = norm_2d(u)
     if 0 == norm_u:
         raise ValueError('zero length segment:%s' + str(seg))
     t = np.dot(v, u) / norm_u
     if t <= 0:
-        return norm(start - x)
+        return norm_2d(start - x)
     elif t >= norm_u:
-        return norm(v)
+        return norm_2d(v)
     else:
-        return norm(u * t / norm_u + start - x)
+        return norm_2d(u * t / norm_u + start - x)
 
 class RawNodeSearcher:
     def __init__(self, nodes):
@@ -138,16 +141,16 @@ class KDTreeSegmentSearcher:
         if len(keys) == len(segments):
             self.medium_indes = None
         else:
-            self.medium_indes = np.empty((len(keys), 2))
+            self.medium_indes = np.empty((len(keys), 2),dtype=int)
             self.medium_indes[:, 0] = medium_indes
             self.medium_indes[:, 1] = 0
             self._current_generation = 0
                 
     
     def rough_search_indes(self, x, rad, eps=0):
-        r = rad * (1 + eps) + self.rad_plus
+        r = (rad + self.rad_plus)*(1+eps)
         indes = self.kd_tree.query_ball_point(x, r, eps=eps)
-        if self.medium_indes:
+        if self.medium_indes is not None:
             self._shift_current_generation()
             medium_indes = self.medium_indes
             current_generation = self._current_generation

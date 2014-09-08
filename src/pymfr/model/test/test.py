@@ -109,7 +109,7 @@ def test_raw_kdtree_segment_searcher_cmp():
     raw_searcher = RawSegmentSearcher(segments)
     kd_searcher = KDTreeSegmentSearcher(segments)
     
-    pts_num = 50
+    pts_num = 200
     pts = rand_coords(start_range, pts_num)
     rads = rand_coords(np.array([[5], [60]], dtype=float),pts_num)
     
