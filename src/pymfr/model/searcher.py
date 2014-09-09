@@ -4,7 +4,7 @@
 '''
 
 import numpy as np
-from scipy.spatial.kdtree import KDTree
+from scipy.spatial import cKDTree as KDTree
 from pymfr.misc.tools import ensure_sequence
 from numpy.linalg import norm
 from numbers import Number
