@@ -4,7 +4,8 @@
 '''
 
 import numpy as np
-from pymfr.model.searcher import KDTreeNodeSearcher, RawNodeSearcher, RawSegmentSearcher, KDTreeSegmentSearcher
+from pymfr.model.searcher import KDTreeNodeSearcher, RawNodeSearcher, RawSegmentSearcher, KDTreeSegmentSearcher, \
+    RawSupportNodeSearcher, KDTreeSupportNodeSearcher
 from pymfr.misc.tools import twod_uniform_coords, rand_coords
 from nose.tools import assert_set_equal, eq_
 from math import pi
@@ -111,17 +112,17 @@ def test_raw_kdtree_segment_searcher_cmp():
     
     pts_num = 200
     pts = rand_coords(start_range, pts_num)
-    rads = rand_coords(np.array([[5], [60]], dtype=float),pts_num)
+    rads = rand_coords(np.array([[5], [60]], dtype=float), pts_num)
     
     eps = 1e-6
-    for pt, rad in zip(pts,rads):
+    for pt, rad in zip(pts, rads):
         raw_indes = raw_searcher.search_indes(pt, rad, eps)
         kd_indes = kd_searcher.search_indes(pt, rad, eps)
         assert_set_equal(set(raw_indes), set(kd_indes))
         
         raw_segs = raw_searcher.search(pt, rad, eps)
         kd_segs = kd_searcher.search(pt, rad, eps)
-        assert_set_equal(set(raw_segs),set(kd_segs))
+        assert_set_equal(set(raw_segs), set(kd_segs))
 
 def gen_rand_segments(start_range, length_mean, length_std, num):
     start_coords = rand_coords(start_range, num)
@@ -136,4 +137,26 @@ def gen_rand_segments(start_range, length_mean, length_std, num):
     
     return [MockSegment(start_coord, end_coord) for start_coord, end_coord in zip(start_coords, end_coords)]
     
+def test_raw_kdtree_cmp_support_node_searcher():
+    nodes_size = 100
+    coords = np.random.rand(nodes_size, 2)
+    coords[:, 0] = -2 + coords[:, 0] * 9
+    coords[:, 1] = -4 + coords[:, 0] * 9
     
+    nodes = [MockNode(coord) for coord in coords]
+    rads = np.random.randn(nodes_size)
+    rads = rads + 1
+    rads = np.abs(rads)
+    
+    raw_searcher = RawSupportNodeSearcher(nodes, rads)
+    kd_searcher = KDTreeSupportNodeSearcher(nodes, rads)
+    
+    xs_size = 20
+    xs = np.random.rand(xs_size, 2)
+    xs[:, 0] = -2 + xs[:, 0] * 9
+    xs[:, 1] = -4 + xs[:, 1] * 9
+    eps = 0.1
+    for x in xs:
+        raw_indes = raw_searcher.search_indes(x, eps)
+        kd_indes = kd_searcher.search_indes(x, eps)
+        assert_set_equal(set(raw_indes), set(kd_indes))

@@ -11,12 +11,13 @@ from numbers import Number
 from collections import Callable
 from math import ceil, sqrt
 import sys
+import itertools
     
 def _max_len(segments):
     return max(norm(segment.end.coord - segment.start.coord) for segment in segments)
 
 def norm_2d(vec2d):
-    return sqrt(vec2d[0]*vec2d[0]+vec2d[1]*vec2d[1])
+    return sqrt(vec2d[0] * vec2d[0] + vec2d[1] * vec2d[1])
 
 def _distance_to_seg(x, seg):
     start = seg.start.coord
@@ -141,14 +142,14 @@ class KDTreeSegmentSearcher:
         if len(keys) == len(segments):
             self.medium_indes = None
         else:
-            self.medium_indes = np.empty((len(keys), 2),dtype=int)
+            self.medium_indes = np.empty((len(keys), 2), dtype=int)
             self.medium_indes[:, 0] = medium_indes
             self.medium_indes[:, 1] = 0
             self._current_generation = 0
                 
     
     def rough_search_indes(self, x, rad, eps=0):
-        r = (rad + self.rad_plus)*(1+eps)
+        r = (rad + self.rad_plus) * (1 + eps)
         indes = self.kd_tree.query_ball_point(x, r, eps=eps)
         if self.medium_indes is not None:
             self._shift_current_generation()
@@ -184,3 +185,96 @@ class KDTreeSegmentSearcher:
         segments = self.segments
         r = rad * (1 + eps)
         return [segments[i] for i in rough_indes if _distance_to_seg(x, segments[i]) < r]
+
+
+class RawSupportNodeSearcher:
+    
+    def __init__(self, nodes, rads=None):
+        self.rads = rads
+        self.nodes = nodes
+        
+    def search_indes(self, x, eps=0):
+        return [i for i in range(len(self.nodes)) if norm(self.nodes[i].coord - x) < 
+                (self.rads[i] if self.rads is not None else self.nodes[i].radius) * (1 + eps)]
+    
+    def search_nodes(self, x, eps=0):
+        return [self.nodes[i] for i in range(len(self.nodes)) if norm(self.nodes[i].coord - x) < 
+                (self.rads[i] if self.rads is not None else self.nodes[i].radius) * (1 + eps)]
+
+class KDTreeSupportNodeSearcher:
+    
+    def __init__(self, nodes, rads=None, loosen=None):
+        self.nodes = nodes
+        if rads is None:
+            rads = [node.radius for node in nodes]
+        self.rads = rads
+        
+        if loosen is None:
+            self.loosen = self.estimate_loosen(rads)
+        elif isinstance(loosen, Number):
+            self.loosen = loosen
+        else:
+            self.loosen = loosen(nodes, rads)
+        
+        self.coords = np.array([node.coord for node in nodes], dtype=float)
+        self._build_kd_tree(rads)
+    
+    def estimate_loosen(self, rads):
+        mean = np.mean(rads)
+        std = np.std(rads)
+        return mean + std
+    
+    def _build_kd_tree(self, rads):
+        keys = []
+        medium_indes = []
+        loosen = self.loosen
+        coords = self.coords
+        for i in range(len(coords)):
+            coord = coords[i]
+            rad = rads[i]
+            if rad <= loosen:
+                keys.append(coord)
+                medium_indes.append(i)
+            else:
+                alter_num_per_dim = ceil(rad / loosen)
+                for alter_coord in itertools.product(*[np.linspace(c - rad + loosen, c + rad - loosen, alter_num_per_dim) for c in coord]):
+                    keys.append(alter_coord)
+                    medium_indes.append(i)
+        if len(coords) < len(keys):
+            self.medium_indes = np.zeros((len(keys), 2))
+            self.medium_indes[:, 0] = medium_indes
+            self._current_generation = 1
+        self.kd_tree = KDTree(keys)
+                
+    def search_indes(self, x, eps=0):
+        r = self.loosen * (1 + eps)
+        indes = self.kd_tree.query_ball_point(x, r, p=float('inf'), eps=eps)
+        if self.medium_indes is not None:
+            self._shift_current_generation()
+            medium_indes = self.medium_indes
+            current_generation = self._current_generation
+            result = []
+            for i in indes:
+                index, generation = medium_indes[i]
+                if generation == current_generation:
+                    continue
+                
+                medium_indes[i, 1] = current_generation
+                rad = self.rads[index]
+                coord = self.coords[index]
+                if np.linalg.norm(x - coord) >= rad * (1 + eps):
+                    continue
+                result.append(index)
+            return result
+        else:
+            return [i for i in indes if np.linalg.norm(self.coords[i] - x) < self.rads[i] * (1 + eps)]
+        
+    def search_nodes(self, x, eps=0):
+        return [self.nodes[i] for i in self.search_indes(x, eps)]
+    
+    def _shift_current_generation(self):
+        if self._current_generation == sys.maxsize:
+            self._current_generation = 0
+            self.medium_indes[:, 1] = -1
+        else:
+            self._current_generation += 1     
