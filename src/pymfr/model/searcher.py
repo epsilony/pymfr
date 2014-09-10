@@ -252,9 +252,9 @@ class KDTreeSupportNodeSearcher:
             self._current_generation = 1
         self.kd_tree = KDTree(keys)
                 
-    def search_indes(self, x, eps=0):
-        r = self.loosen * (1 + eps)
-        indes = self.kd_tree.query_ball_point(x, r, p=float('inf'), eps=eps)
+    def search_indes(self, x):
+        r = self.loosen
+        indes = self.kd_tree.query_ball_point(x, r, p=float('inf'))
         indes_generation = self._indes_generation
         if self.medium_indes is not None:
             self._shift_current_generation()
@@ -269,15 +269,15 @@ class KDTreeSupportNodeSearcher:
                 indes_generation[index] = current_generation
                 rad = self.rads[index]
                 coord = self.coords[index]
-                if np.linalg.norm(x - coord) >= rad * (1 + eps):
+                if np.linalg.norm(x - coord) >= rad:
                     continue
                 result.append(index)
             return result
         else:
-            return [i for i in indes if np.linalg.norm(self.coords[i] - x) < self.rads[i] * (1 + eps)]
+            return [i for i in indes if np.linalg.norm(self.coords[i] - x) < self.rads[i]]
         
-    def search_nodes(self, x, eps=0):
-        return [self.nodes[i] for i in self.search_indes(x, eps)]
+    def search_nodes(self, x):
+        return [self.nodes[i] for i in self.search_indes(x)]
     
     def _shift_current_generation(self):
         if self._current_generation == sys.maxsize:
@@ -285,3 +285,135 @@ class KDTreeSupportNodeSearcher:
             self.index_generation.fill(0)
         else:
             self._current_generation += 1   
+            
+class SupportDomainSearcher2D:
+    def __init__(self, support_node_searcher, segment_searcher):
+        self.support_node_searcher = support_node_searcher
+        self.segment_searcher = segment_searcher
+    
+    def search_node_segment_indes(self, x):
+        node_indes = self.search_node_indes(x)
+        sns = self.support_node_searcher
+        farthest_dist = max(distance_square_2d(sns.coords[i], x) for i in node_indes)
+        farthest_dist = farthest_dist ** 0.5
+        segment_indes = self.segment_searcher.search_indes(x, farthest_dist)
+        
+        return node_indes, segment_indes
+    
+    def search_node_indes(self, x):
+        sns = self.support_node_searcher
+        node_indes = sns.search_indes(x)
+        return node_indes
+    
+class VisibleSupportNodesSearcher2D:
+    def __init__(self, support_node_searcher, segment_searcher, perturb_distance=1e-6):
+        self.support_domain_searcher = SupportDomainSearcher2D(support_node_searcher, segment_searcher)
+        self.support_node_searhcer = support_node_searcher
+        self.segment_searcher = segment_searcher
+        self.perturb_distance = perturb_distance
+    
+
+    def search(self, x, bnd):
+        node_indes, segment_indes = self.support_domain_searcher.search_node_segment_indes(x)
+        if len(segment_indes) == 0:
+            return node_indes
+        else:
+            return self.visible_filter(x, bnd, node_indes, segment_indes)
+        
+    def visible_filter(self, x, bnd, node_indes, segment_indes):
+        pb_x = x if bnd is None else self._perturb_x(x, bnd) 
+        all_segs = self.segment_searcher.segments
+        segs = [] if bnd is None else [bnd]
+        for i in segment_indes:
+            seg = all_segs[i]
+            if seg is bnd:
+                continue
+            if np.cross(seg.end.coord - seg.start.coord, pb_x - seg.start.coord) > 0:
+                segs.append(seg)
+        
+        all_nodes = self.support_node_searhcer.nodes
+        
+        
+        filtered_mask = np.zeros(len(node_indes), dtype=np.byte)
+        for seg in segs:
+            for i in range(len(node_indes)):
+                if filtered_mask[i]:
+                    continue
+                index = node_indes[i]
+                node = all_nodes[index]
+                if seg.start is node or seg.end is node:
+                    continue
+                coord = node.coord
+                u = seg.end.coord - seg.start.coord
+                if np.cross(u, coord - seg.start.coord) >= 0:
+                    continue
+                if seg is bnd:
+                    filtered_mask[i] = 1
+                    continue
+                v = coord - pb_x
+                if np.cross(seg.start.coord - pb_x, v) < 0 or np.cross(seg.end.coord - pb_x, v) > 0:
+                    continue
+                filtered_mask[i] = 1
+        
+        node_indes = [node_indes[i] for i in range(len(node_indes)) if filtered_mask[i] == 0]
+        return node_indes
+        
+    _COS_LIMIT = 1 / 2 ** 0.5
+    def _perturb_x(self, x, bnd):
+        s = bnd.start.coord
+        e = bnd.end.coord
+        n = bnd.succ.end.coord - e
+        n = n / norm_2d(n)
+        p = bnd.pred.start.coord - s
+        p = p / norm_2d(p)
+        v = e - s
+        bnd_length = norm_2d(v)
+        v = v / bnd_length
+        
+        
+        COS_LIMIT = self._COS_LIMIT
+        perturb_distance = self.perturb_distance
+        vp = (v + p) / 2
+        norm_vp = norm_2d(vp)
+        if norm_vp == 0:
+            left_limit = 0
+        else:
+            vp = vp / norm_vp
+            cos_vp_v = np.dot(vp, v)
+            if cos_vp_v < COS_LIMIT:
+                left_limit = 0
+            else:
+                sin_vp_v = np.cross(v, vp)
+                left_limit = perturb_distance / sin_vp_v * cos_vp_v
+        
+        vn = (-v + n) / 2
+        norm_vn = norm_2d(vn)
+        if norm_vn == 0:
+            right_limit = 0
+        else:
+            vn = vn / norm_vn
+            
+            cos_vn_v = np.dot(vn, -v)
+            
+    
+            if cos_vn_v < COS_LIMIT:
+                right_limit = 0
+            else:
+                sin_vn_v = np.cross(vn, -v)
+                right_limit = perturb_distance / sin_vn_v * cos_vn_v
+        
+        if left_limit > bnd_length - right_limit:
+            raise ValueError('the angle around %s is too small: ' % (str(bnd)))
+        
+        xs = x - s
+        xs_len = norm_2d(xs)
+        
+        if xs_len < left_limit:
+            perturb_ori = s + v * left_limit
+        elif xs_len > bnd_length - right_limit:
+            perturb_ori = s + v * (bnd_length - right_limit)
+        else:
+            perturb_ori = x
+        
+        perturb_v = np.array((-v[1], v[0]), dtype=float)
+        return perturb_ori + perturb_v * perturb_distance
