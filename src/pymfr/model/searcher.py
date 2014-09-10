@@ -19,6 +19,9 @@ def _max_len(segments):
 def norm_2d(vec2d):
     return sqrt(vec2d[0] * vec2d[0] + vec2d[1] * vec2d[1])
 
+def distance_square_2d(p1, p2):
+    return (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2
+
 def _distance_to_seg(x, seg):
     start = seg.start.coord
     end = seg.end.coord
@@ -142,26 +145,25 @@ class KDTreeSegmentSearcher:
         if len(keys) == len(segments):
             self.medium_indes = None
         else:
-            self.medium_indes = np.empty((len(keys), 2), dtype=int)
-            self.medium_indes[:, 0] = medium_indes
-            self.medium_indes[:, 1] = 0
-            self._current_generation = 0
-                
-    
+            self.medium_indes = np.array(medium_indes, dtype=int)
+            self._indes_generation = np.zeros(len(self.segments), dtype=int)
+            self._current_generation = 1
+            
     def rough_search_indes(self, x, rad, eps=0):
         r = (rad + self.rad_plus) * (1 + eps)
         indes = self.kd_tree.query_ball_point(x, r, eps=eps)
+        indes_generation = self._indes_generation
         if self.medium_indes is not None:
             self._shift_current_generation()
             medium_indes = self.medium_indes
             current_generation = self._current_generation
             result = []
             for i in indes:
-                index, generation = medium_indes[i]
-                if generation == current_generation:
+                index = medium_indes[i]
+                if indes_generation[index] == current_generation:
                     continue
                 else:
-                    medium_indes[i, 1] = current_generation
+                    indes_generation[index] = current_generation
                     result.append(index)
             return result
         else:
@@ -169,8 +171,8 @@ class KDTreeSegmentSearcher:
     
     def _shift_current_generation(self):
         if self._current_generation == sys.maxsize:
-            self._current_generation = 0
-            self.medium_indes[:, 1] = -1
+            self._current_generation = 1
+            self.index_generation.fill(0)
         else:
             self._current_generation += 1
     
@@ -190,8 +192,12 @@ class KDTreeSegmentSearcher:
 class RawSupportNodeSearcher:
     
     def __init__(self, nodes, rads=None):
-        self.rads = rads
+        if rads is None:
+            self.rads = [node.radius for node in nodes]
+        else:
+            self.rads = rads
         self.nodes = nodes
+        self.coords = [node.coord for node in nodes]
         
     def search_indes(self, x, eps=0):
         return [i for i in range(len(self.nodes)) if norm(self.nodes[i].coord - x) < 
@@ -241,25 +247,26 @@ class KDTreeSupportNodeSearcher:
                     keys.append(alter_coord)
                     medium_indes.append(i)
         if len(coords) < len(keys):
-            self.medium_indes = np.zeros((len(keys), 2))
-            self.medium_indes[:, 0] = medium_indes
+            self.medium_indes = np.array(medium_indes, dtype=int)
+            self._indes_generation = np.zeros(len(self.nodes), dtype=int)
             self._current_generation = 1
         self.kd_tree = KDTree(keys)
                 
     def search_indes(self, x, eps=0):
         r = self.loosen * (1 + eps)
         indes = self.kd_tree.query_ball_point(x, r, p=float('inf'), eps=eps)
+        indes_generation = self._indes_generation
         if self.medium_indes is not None:
             self._shift_current_generation()
             medium_indes = self.medium_indes
             current_generation = self._current_generation
             result = []
             for i in indes:
-                index, generation = medium_indes[i]
-                if generation == current_generation:
+                index = medium_indes[i]
+                if indes_generation[index] == current_generation:
                     continue
                 
-                medium_indes[i, 1] = current_generation
+                indes_generation[index] = current_generation
                 rad = self.rads[index]
                 coord = self.coords[index]
                 if np.linalg.norm(x - coord) >= rad * (1 + eps):
@@ -274,7 +281,7 @@ class KDTreeSupportNodeSearcher:
     
     def _shift_current_generation(self):
         if self._current_generation == sys.maxsize:
-            self._current_generation = 0
-            self.medium_indes[:, 1] = -1
+            self._current_generation = 1
+            self.index_generation.fill(0)
         else:
-            self._current_generation += 1     
+            self._current_generation += 1   

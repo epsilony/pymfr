@@ -7,7 +7,7 @@ import numpy as np
 from pymfr.model.searcher import KDTreeNodeSearcher, RawNodeSearcher, RawSegmentSearcher, KDTreeSegmentSearcher, \
     RawSupportNodeSearcher, KDTreeSupportNodeSearcher
 from pymfr.misc.tools import twod_uniform_coords, rand_coords
-from nose.tools import assert_set_equal, eq_
+from nose.tools import assert_set_equal, eq_, assert_almost_equal, ok_
 from math import pi
 
 class MockNode:
@@ -56,6 +56,7 @@ def test_kdtree_raw_comp_nodes_searcher():
         
         kd_nodes = kd_searcher.search(x, rad)
         raw_nodes = raw_searcher.search(x, rad)
+        eq_(len(kd_nodes), len(raw_nodes))
         assert_set_equal(set(kd_nodes), set(raw_nodes))
 
 class MockSegment:
@@ -98,12 +99,13 @@ def test_raw_segment_searcher():
         
         act_segs = searcher.search(x, rad, eps)
         exp_segs = [segments[i] for i in exp_indes]
+        eq_(len(exp_segs), len(act_segs))
         assert_set_equal(set(exp_segs), set(act_segs))
         
 def test_raw_kdtree_segment_searcher_cmp():
     start_range = np.array([[-10, -10], [90, 90]], dtype=float)
-    length_mean = 20
-    length_std = 5
+    length_mean = 10
+    length_std = 20
     num_segs = 100
     
     segments = gen_rand_segments(start_range, length_mean, length_std, num_segs)
@@ -118,10 +120,12 @@ def test_raw_kdtree_segment_searcher_cmp():
     for pt, rad in zip(pts, rads):
         raw_indes = raw_searcher.search_indes(pt, rad, eps)
         kd_indes = kd_searcher.search_indes(pt, rad, eps)
+        eq_(len(raw_indes), len(kd_indes))
         assert_set_equal(set(raw_indes), set(kd_indes))
         
         raw_segs = raw_searcher.search(pt, rad, eps)
         kd_segs = kd_searcher.search(pt, rad, eps)
+        eq_(len(raw_segs), len(kd_segs))
         assert_set_equal(set(raw_segs), set(kd_segs))
 
 def gen_rand_segments(start_range, length_mean, length_std, num):
@@ -159,4 +163,5 @@ def test_raw_kdtree_cmp_support_node_searcher():
     for x in xs:
         raw_indes = raw_searcher.search_indes(x, eps)
         kd_indes = kd_searcher.search_indes(x, eps)
+        eq_(len(raw_indes), len(kd_indes))
         assert_set_equal(set(raw_indes), set(kd_indes))
