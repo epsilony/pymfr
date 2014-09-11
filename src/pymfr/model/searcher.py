@@ -292,7 +292,7 @@ class KDTreeSupportNodeSearcher:
         else:
             self._current_generation += 1   
             
-class SupportDomainSearcher2D:
+class _SupportDomainNodeSegmentSearcher2D:
     def __init__(self, support_node_searcher, segment_searcher, **kwargs):
         self.support_node_searcher = support_node_searcher
         self.segment_searcher = segment_searcher
@@ -317,7 +317,7 @@ class VisibleSupportNodeSearcher2D:
               segment_searcher,
               perturb_distance=1e-6,
               **kwargs):
-        self.support_domain_searcher = SupportDomainSearcher2D(support_node_searcher, segment_searcher)
+        self.support_domain_searcher = _SupportDomainNodeSegmentSearcher2D(support_node_searcher, segment_searcher)
         self.support_node_searhcer = support_node_searcher
         self.segment_searcher = segment_searcher
         self.perturb_distance = perturb_distance
