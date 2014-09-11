@@ -305,7 +305,7 @@ class SupportDomainSearcher2D:
         node_indes = sns.search_indes(x)
         return node_indes
     
-class VisibleSupportNodesSearcher2D:
+class VisibleSupportNodeSearcher2D:
     def __init__(self, support_node_searcher, segment_searcher, perturb_distance=1e-6):
         self.support_domain_searcher = SupportDomainSearcher2D(support_node_searcher, segment_searcher)
         self.support_node_searhcer = support_node_searcher
@@ -313,7 +313,7 @@ class VisibleSupportNodesSearcher2D:
         self.perturb_distance = perturb_distance
     
 
-    def search(self, x, bnd):
+    def search_indes(self, x, bnd=None):
         node_indes, segment_indes = self.support_domain_searcher.search_node_segment_indes(x)
         if len(segment_indes) == 0:
             return node_indes

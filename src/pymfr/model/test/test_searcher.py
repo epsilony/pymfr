@@ -5,7 +5,7 @@
 
 import numpy as np
 from pymfr.model.searcher import KDTreeNodeSearcher, RawNodeSearcher, RawSegmentSearcher, KDTreeSegmentSearcher, \
-    RawSupportNodeSearcher, KDTreeSupportNodeSearcher, VisibleSupportNodesSearcher2D
+    RawSupportNodeSearcher, KDTreeSupportNodeSearcher, VisibleSupportNodeSearcher2D
 from pymfr.misc.tools import twod_uniform_coords, rand_coords
 from nose.tools import assert_set_equal, eq_, assert_almost_equal, ok_
 from math import pi
@@ -168,7 +168,7 @@ def test_raw_kdtree_cmp_support_node_searcher():
 def test_perturb_center():
     perturb_distance = 0.1
     epsilon = 0.000001
-    vss = VisibleSupportNodesSearcher2D(None, None, perturb_distance)
+    vss = VisibleSupportNodeSearcher2D(None, None, perturb_distance)
     
     x_bnd_exp_s = (
                  [(0.5, 0.5), [(-0.9 - epsilon, 2.5), (0.5, 0.5), (1.5, 1.2), (0.8 + epsilon, 2.2)], (0.4426537655636671, 0.581923192051904)],  # left end 90deg+
@@ -195,7 +195,7 @@ def test_visible_support_domain_searcher():
     x_bnd_exp_s = data['x_bnd_exp_s']
     searcher = data['searcher']
     for x, bnd, exp in x_bnd_exp_s:
-        act = searcher.search(x, bnd)
+        act = searcher.search_indes(x, bnd)
         eq_(len(exp), len(act))
         assert_set_equal(set(exp), set(act))
 
@@ -266,7 +266,7 @@ def _visible_support_domain_data():
     segment_searcher.mock_indes = [segment.index for segment in segments]
     segment_searcher.segments = [None if i % 2 == 0 else segments[i // 2] for i in range(2 * len(segments))]
     
-    searcher = VisibleSupportNodesSearcher2D(support_node_searcher, segment_searcher)
+    searcher = VisibleSupportNodeSearcher2D(support_node_searcher, segment_searcher)
     
     t = locals()
     result = {name:t[name] for name in [
