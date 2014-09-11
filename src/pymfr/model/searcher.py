@@ -39,8 +39,9 @@ def _distance_to_seg(x, seg):
         return norm_2d(u * t / norm_u + start - x)
 
 class RawNodeSearcher:
-    def __init__(self, nodes):
+    def setup(self, nodes, **kwargs):
         self.nodes = ensure_sequence(nodes)
+        return self
         
     def search(self, x, rad, eps=0):
         r = rad * (1 + eps)
@@ -53,9 +54,10 @@ class RawNodeSearcher:
 
 
 class RawSegmentSearcher:        
-    def __init__(self, segments):
+    def setup(self, segments, **kwargs):
         segments = ensure_sequence(segments)
         self.segments = segments
+        return self
             
     def search_indes(self, x, rad, eps=0):
         if eps < 0:
@@ -72,12 +74,13 @@ class RawSegmentSearcher:
         return [segment for segment in segments if _distance_to_seg(x, segment) < rad]
 
 class KDTreeNodeSearcher:
-    def __init__(self, nodes):
+    def setup(self, nodes, **kwargs):
         nodes = ensure_sequence(nodes)
         self.nodes = nodes
         coords = [node.coord for node in nodes]
         self.kd_tree = KDTree(coords)
-        
+        return self
+    
     def search_indes(self, x, rad, eps=0):
         rad *= (1 + eps)
         return self.kd_tree.query_ball_point(x, rad)
@@ -95,7 +98,7 @@ def _estimate_loosen(seg_sizes):
         return exp_loosen
 
 class KDTreeSegmentSearcher:
-    def __init__(self, segments, loosen=None):
+    def setup(self, segments, loosen=None, **kwargs):
         segments = ensure_sequence(segments)
         self.segments = segments
         seg_sizes = [norm(seg.end.coord - seg.start.coord) for seg in segments]
@@ -111,6 +114,7 @@ class KDTreeSegmentSearcher:
             raise ValueError()
         
         self._gen_kdtree(seg_sizes)
+        return self
     
     def _gen_kdtree(self, seg_sizes):
         loosen = self.loosen
@@ -191,13 +195,14 @@ class KDTreeSegmentSearcher:
 
 class RawSupportNodeSearcher:
     
-    def __init__(self, nodes, rads=None):
+    def setup(self, nodes, rads=None, **kwargs):
         if rads is None:
             self.rads = [node.radius for node in nodes]
         else:
             self.rads = rads
         self.nodes = nodes
         self.coords = [node.coord for node in nodes]
+        return self
         
     def search_indes(self, x, eps=0):
         return [i for i in range(len(self.nodes)) if norm(self.nodes[i].coord - x) < 
@@ -209,7 +214,7 @@ class RawSupportNodeSearcher:
 
 class KDTreeSupportNodeSearcher:
     
-    def __init__(self, nodes, rads=None, loosen=None):
+    def setup(self, nodes, rads=None, loosen=None, **kwargs):
         self.nodes = nodes
         if rads is None:
             rads = [node.radius for node in nodes]
@@ -224,6 +229,7 @@ class KDTreeSupportNodeSearcher:
         
         self.coords = np.array([node.coord for node in nodes], dtype=float)
         self._build_kd_tree(rads)
+        return self
     
     def estimate_loosen(self, rads):
         mean = np.mean(rads)
@@ -287,7 +293,7 @@ class KDTreeSupportNodeSearcher:
             self._current_generation += 1   
             
 class SupportDomainSearcher2D:
-    def __init__(self, support_node_searcher, segment_searcher):
+    def __init__(self, support_node_searcher, segment_searcher, **kwargs):
         self.support_node_searcher = support_node_searcher
         self.segment_searcher = segment_searcher
     
@@ -306,12 +312,18 @@ class SupportDomainSearcher2D:
         return node_indes
     
 class VisibleSupportNodeSearcher2D:
-    def __init__(self, support_node_searcher, segment_searcher, perturb_distance=1e-6):
+    def __init__(self,
+              support_node_searcher,
+              segment_searcher,
+              perturb_distance=1e-6,
+              **kwargs):
         self.support_domain_searcher = SupportDomainSearcher2D(support_node_searcher, segment_searcher)
         self.support_node_searhcer = support_node_searcher
         self.segment_searcher = segment_searcher
         self.perturb_distance = perturb_distance
     
+    def setup(self, perturb_distance=1e-6, **kwargs):
+        self.perturb_distance = perturb_distance
 
     def search_indes(self, x, bnd=None):
         node_indes, segment_indes = self.support_domain_searcher.search_node_segment_indes(x)
