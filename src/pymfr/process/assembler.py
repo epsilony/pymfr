@@ -5,9 +5,10 @@ import numpy as np
 from pymfr.misc.tools import add_to_2d
 
 class VirtualLoadWorkAssembler:
-    def __init__(self, vector, value_dim=1):
-        self.value_dim = value_dim
+    def setup(self, vector, value_dim, **kwargs):
         self.vector = vector
+        self.value_dim = value_dim
+        return self
     
     def assemble(self, weight, node_indes, test_shape_func, load):
         phi = test_shape_func[0]
@@ -22,13 +23,14 @@ class VirtualLoadWorkAssembler:
             self.vector[matrix_indes] += phi * (load[i] * weight)
 
 class LagrangleDirichletLoadAssembler:
-    def __init__(self, matrix, vector, value_dim, lagrangle_nodes_size):
+    def setup(self, matrix, vector, value_dim, lagrangle_nodes_size, **kwargs):
         self.matrix = matrix
         self.vector = vector
         self.value_dim = value_dim
         self.lagrangle_nodes_size = lagrangle_nodes_size
         for i in range(-lagrangle_nodes_size * value_dim, 0):
             matrix[i, i] = 1
+        return self
     
     def assemble(self, weight, node_indes, test_shape_func, load, load_validity, lagrangle_node_indes, lagrangle_test_shape_func, trial_shape_func=None, lagrangle_trial_shape_func=None):
         phi_left = test_shape_func[0]
@@ -65,11 +67,12 @@ class LagrangleDirichletLoadAssembler:
     
 class PenaltyDirichletLoadAssembler:
     
-    def __init__(self, matrix, vector, value_dim, penalty):
+    def setup(self, matrix, vector, value_dim, penalty, **kwargs):
         self.matrix = matrix
         self.vector = vector
         self.value_dim = value_dim
         self.penalty = penalty
+        return self
         
     def assemble(self, weight, nodes_indes, test_shape_func, load, load_validity, trial_shape_func=None):
         phi_left = test_shape_func[0]
@@ -90,8 +93,9 @@ class PenaltyDirichletLoadAssembler:
             self.vector[matrix_indes] += phi_left * (factor * load[i])
 
 class MechanicalVolumeAssembler2D:
-    def __init__(self, matrix):
+    def setup(self, matrix, **kwargs):
         self.matrix = matrix
+        return self
         
     def assemble(self, weight, nodes_indes, test_shape_func, constitutive_law, trial_shape_func=None):
         
@@ -121,8 +125,9 @@ class MechanicalVolumeAssembler2D:
         
 class PoissonVolumeAssembler:
     
-    def __init__(self, matrix):
+    def setup(self, matrix, **kwargs):
         self.matrix = matrix
+        return self
     
     def assemble(self, weight, indes, test_shape_func, trial_shape_func=None):
         if trial_shape_func is None:

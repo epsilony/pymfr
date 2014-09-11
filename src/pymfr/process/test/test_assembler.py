@@ -12,7 +12,7 @@ def test_virtual_load_assembler():
     for data in [_data_virtual_load_assembler_1d(),
                  _data_virtual_load_assembler_2d()
                  ]:
-        assembler = VirtualLoadWorkAssembler(vector=data['vector'], value_dim=data['value_dim'])
+        assembler = VirtualLoadWorkAssembler().setup(vector=data['vector'], value_dim=data['value_dim'])
         for weight, indes, test_shape_func, load, exp in zip(*[data[name] for name in 'weights indess test_shape_funcs loads exp_vectors'.split()]):
             assembler.assemble(weight, indes, test_shape_func, load)
             assert_almost_equal(0, np.linalg.norm(assembler.vector - exp))
@@ -91,7 +91,7 @@ def test_lagrangle_dirichlet_assembler():
         _test_lagrangle_dirichlet_assembler(data)
 
 def _test_lagrangle_dirichlet_assembler(data):
-    assembler = LagrangleDirichletLoadAssembler(
+    assembler = LagrangleDirichletLoadAssembler().setup(
                    matrix=data['matrix'],
                    vector=data['vector'],
                    value_dim=data['value_dim'],
@@ -352,7 +352,7 @@ def test_mechanical_2d_assembler():
     for name in ['test_shape_funcs', 'trial_shape_funcs']:
         data[name] = [np.array(d, dtype=float) if d is not None else None for d in data[name]]
     
-    assembler = MechanicalVolumeAssembler2D(data['matrix'])
+    assembler = MechanicalVolumeAssembler2D().setup(data['matrix'])
     constitutive_law = np.array(data['constitutive_law'], dtype=float)
     for weight, indes, test_shape_func, trial_shape_func, exp_mat in zip(*[data[name] for name in [
                        'weights',
@@ -394,7 +394,7 @@ def test_poission_2d():
     for name in ['test_shape_funcs', 'trial_shape_funcs']:
         data[name] = [np.array(d, dtype=float) if d is not None else None for d in data[name]]
     
-    assembler = PoissonVolumeAssembler(data['matrix'])
+    assembler = PoissonVolumeAssembler().setup(data['matrix'])
     for weight, indes, test_shape_func, trial_shape_func, exp_mat in zip(*[data[name] for name in [
                        'weights',
                        'indess',
