@@ -352,7 +352,7 @@ def test_mechanical_2d_assembler():
     for name in ['test_shape_funcs', 'trial_shape_funcs']:
         data[name] = [np.array(d, dtype=float) if d is not None else None for d in data[name]]
     
-    assembler = MechanicalVolumeAssembler2D().setup(data['matrix'])
+    assembler = MechanicalVolumeAssembler2D().setup(matrix=data['matrix'])
     constitutive_law = np.array(data['constitutive_law'], dtype=float)
     for weight, indes, test_shape_func, trial_shape_func, exp_mat in zip(*[data[name] for name in [
                        'weights',
@@ -394,7 +394,7 @@ def test_poission_2d():
     for name in ['test_shape_funcs', 'trial_shape_funcs']:
         data[name] = [np.array(d, dtype=float) if d is not None else None for d in data[name]]
     
-    assembler = PoissonVolumeAssembler().setup(data['matrix'])
+    assembler = PoissonVolumeAssembler().setup(matrix=data['matrix'])
     for weight, indes, test_shape_func, trial_shape_func, exp_mat in zip(*[data[name] for name in [
                        'weights',
                        'indess',

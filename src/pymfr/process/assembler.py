@@ -3,12 +3,17 @@
 '''
 import numpy as np
 from pymfr.misc.tools import add_to_2d
+from injector import Key
+from pymfr.misc.mixin import SetupMixin
 
-class VirtualLoadWorkAssembler:
-    def setup(self, vector, value_dim, **kwargs):
-        self.vector = vector
-        self.value_dim = value_dim
-        return self
+VolumeAssembler = Key('volume_assembler')
+VolumeLoadAssembler = Key('volume_load_assmbler')
+NeumannAssembler = Key('neumann_assembler')
+DirichletAssembler = Key('dirichlet_assembler')
+
+
+class VirtualLoadWorkAssembler(SetupMixin):
+    __prerequisites__ = ['vector', 'value_dim']
     
     def assemble(self, weight, node_indes, test_shape_func, load):
         phi = test_shape_func[0]
@@ -22,16 +27,17 @@ class VirtualLoadWorkAssembler:
                 matrix_indes += 1
             self.vector[matrix_indes] += phi * (load[i] * weight)
 
-class LagrangleDirichletLoadAssembler:
-    def setup(self, matrix, vector, value_dim, lagrangle_nodes_size, **kwargs):
-        self.matrix = matrix
-        self.vector = vector
-        self.value_dim = value_dim
-        self.lagrangle_nodes_size = lagrangle_nodes_size
-        for i in range(-lagrangle_nodes_size * value_dim, 0):
-            matrix[i, i] = 1
-        return self
+class LagrangleDirichletLoadAssembler(SetupMixin):
     
+    __prerequisites__ = "matrix, vector, value_dim, lagrangle_nodes_size".split(", ")
+    __after_setup__ = ['set_matrix_lagrangle_diags']   
+     
+    def set_matrix_lagrangle_diags(self, **kwargs):
+        for i in range(-self.lagrangle_nodes_size * self.value_dim, 0):
+            self.matrix[i, i] = 1
+        
+        return self
+ 
     def assemble(self, weight, node_indes, test_shape_func, load, load_validity, lagrangle_node_indes, lagrangle_test_shape_func, trial_shape_func=None, lagrangle_trial_shape_func=None):
         phi_left = test_shape_func[0]
         phi_right = trial_shape_func[0] if trial_shape_func is not None else phi_left
@@ -65,14 +71,9 @@ class LagrangleDirichletLoadAssembler:
             self.vector[lagrangle_matrix_indes] += lambda_left * (weight * load[i])
             self.matrix[lagrangle_matrix_indes, lagrangle_matrix_indes] = 0
     
-class PenaltyDirichletLoadAssembler:
-    
-    def setup(self, matrix, vector, value_dim, penalty, **kwargs):
-        self.matrix = matrix
-        self.vector = vector
-        self.value_dim = value_dim
-        self.penalty = penalty
-        return self
+class PenaltyDirichletLoadAssembler(SetupMixin):
+    __prerequisites__ = "matrix, vector, value_dim".split(", ")
+    __optionals__ = [('penalty', 1e6)]
         
     def assemble(self, weight, nodes_indes, test_shape_func, load, load_validity, trial_shape_func=None):
         phi_left = test_shape_func[0]
@@ -92,10 +93,8 @@ class PenaltyDirichletLoadAssembler:
             add_to_2d(self.matrix, matrix_indes, matrix_indes, matrix_value)
             self.vector[matrix_indes] += phi_left * (factor * load[i])
 
-class MechanicalVolumeAssembler2D:
-    def setup(self, matrix, **kwargs):
-        self.matrix = matrix
-        return self
+class MechanicalVolumeAssembler2D(SetupMixin):
+    __prerequisites__ = ['matrix']
         
     def assemble(self, weight, nodes_indes, test_shape_func, constitutive_law, trial_shape_func=None):
         
@@ -123,11 +122,8 @@ class MechanicalVolumeAssembler2D:
         matrix_value = b_left.dot(constitutive_law).dot(b_right) * weight
         add_to_2d(self.matrix, matrix_indes, matrix_indes, matrix_value)
         
-class PoissonVolumeAssembler:
-    
-    def setup(self, matrix, **kwargs):
-        self.matrix = matrix
-        return self
+class PoissonVolumeAssembler(SetupMixin):
+    __prerequisites__ = ['matrix']
     
     def assemble(self, weight, indes, test_shape_func, trial_shape_func=None):
         if trial_shape_func is None:

@@ -20,7 +20,7 @@ def test_kdtree_nodes_searcher():
     
     coords = twod_uniform_coords(xs, ys)
     nodes = [MockNode(coord) for coord in coords]
-    searcher = KDTreeNodeSearcher().setup(node for node in nodes)
+    searcher = KDTreeNodeSearcher().setup(nodes=nodes)
     
     for x, rad, eps, exp_indes in ([(-0.5, -4.5), 1, 0, (0, 1, 10, 11)],
                                 [(-0.5, -4.5), 2 ** 0.5 / 2, 0.001, (0, 1, 10, 11)],
@@ -38,8 +38,8 @@ def test_kdtree_raw_comp_nodes_searcher():
     coords[:, 1] = -4 + coords[:, 0] * 9
     
     nodes = [MockNode(coord) for coord in coords]
-    kd_searcher = KDTreeNodeSearcher().setup([node for node in nodes])
-    raw_searcher = RawNodeSearcher().setup(node for node in nodes)
+    kd_searcher = KDTreeNodeSearcher().setup(nodes=nodes)
+    raw_searcher = RawNodeSearcher().setup(nodes=nodes)
     
     
     xs_size = 20
@@ -82,7 +82,7 @@ def test_raw_segment_searcher():
          ]
     
     segments = [MockSegment(coords[start], coords[end]) for start, end in segment_start_end_indes]
-    searcher = RawSegmentSearcher().setup(segments)
+    searcher = RawSegmentSearcher().setup(segments=segments)
     
     for x, rad, eps, exp_indes in [
         ([1.5, 1.5], 0.5, 1e-6, [0, 1]),
@@ -109,8 +109,8 @@ def test_raw_kdtree_segment_searcher_cmp():
     num_segs = 100
     
     segments = gen_rand_segments(start_range, length_mean, length_std, num_segs)
-    raw_searcher = RawSegmentSearcher().setup(segments)
-    kd_searcher = KDTreeSegmentSearcher().setup(segments)
+    raw_searcher = RawSegmentSearcher().setup(segments=segments)
+    kd_searcher = KDTreeSegmentSearcher().setup(segments=segments)
     
     pts_num = 200
     pts = rand_coords(start_range, pts_num)
@@ -152,8 +152,8 @@ def test_raw_kdtree_cmp_support_node_searcher():
     rads = rads + 1
     rads = np.abs(rads)
     
-    raw_searcher = RawSupportNodeSearcher().setup(nodes, rads)
-    kd_searcher = KDTreeSupportNodeSearcher().setup(nodes, rads)
+    raw_searcher = RawSupportNodeSearcher().setup(nodes=nodes, rads=rads)
+    kd_searcher = KDTreeSupportNodeSearcher().setup(nodes=nodes, rads=rads)
     
     xs_size = 20
     xs = np.random.rand(xs_size, 2)
