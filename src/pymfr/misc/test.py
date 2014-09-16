@@ -8,7 +8,8 @@ from pymfr.misc.weight_func import TripleSpline, weight_function
 import numpy as np
 from pymfr.misc.kernel import PolynomialKernel
 import random
-from pymfr.misc.tools import trans_coords
+from pymfr.misc.tools import trans_coords, recursively_setup
+from pymfr.misc.mixin import SetupMixin
 
 
 def test_partial_size():
@@ -132,49 +133,103 @@ def _test_poly_kernel(spatial_dim, x, order_partial_order_exp_iter):
         assert_almost_equal(np.linalg.norm(act - exp), 0)
 
 def test_trans_coords():
-    coords=np.array([
-         (0,0),
-         (0,1),
-         (0,0.5),
-         (0.5,0),
-         (0.5,0.5),
-         (0.7,0.3)           
+    coords = np.array([
+         (0, 0),
+         (0, 1),
+         (0, 0.5),
+         (0.5, 0),
+         (0.5, 0.5),
+         (0.7, 0.3)           
          ])
-    for dst_range,src_range,exps in [
-               (np.array([[0,0],[-2,1.5]]),None,
+    for dst_range, src_range, exps in [
+               (np.array([[0, 0], [-2, 1.5]]), None,
                     np.array([
-                          (0,0),
-                          (0,1.5),
-                          (0,0.75),
-                          (-1,0),
-                          (-1,0.75),
-                          (-1.4,0.45)
+                          (0, 0),
+                          (0, 1.5),
+                          (0, 0.75),
+                          (-1, 0),
+                          (-1, 0.75),
+                          (-1.4, 0.45)
                           ])),
-                (np.array([[1,-0.5],[-3,1.5]]),None,
+                (np.array([[1, -0.5], [-3, 1.5]]), None,
                     np.array([
-                          (1,-0.5),
-                          (1,1.5),
-                          (1,0.5),
-                          (-1,-0.5),
-                          (-1,0.5),
-                          (-1.8,0.1)
+                          (1, -0.5),
+                          (1, 1.5),
+                          (1, 0.5),
+                          (-1, -0.5),
+                          (-1, 0.5),
+                          (-1.8, 0.1)
                               ])
                  ),
-                 (np.array([[1,-0.5],[-3,1.5]]),np.array([[0.5,0.5],[-1.5,-2.5]]),
+                 (np.array([[1, -0.5], [-3, 1.5]]), np.array([[0.5, 0.5], [-1.5, -2.5]]),
                     np.array([
-                              (0,-0.5+1/3),
-                              (0,-0.5-2/6),
-                              (0,-0.5),
-                              (1,-0.5+2/6),
-                              (1,-0.5),
-                              (1.4,-0.5+2/15)
+                              (0, -0.5 + 1 / 3),
+                              (0, -0.5 - 2 / 6),
+                              (0, -0.5),
+                              (1, -0.5 + 2 / 6),
+                              (1, -0.5),
+                              (1.4, -0.5 + 2 / 15)
                               ])
                   ),
                                       
         ]:
-        acts=trans_coords(coords,dst_range,src_range)
-        assert_almost_equal(0,np.linalg.norm(exps-acts))
+        acts = trans_coords(coords, dst_range, src_range)
+        assert_almost_equal(0, np.linalg.norm(exps - acts))
+
+class _MockCounter(SetupMixin):
     
+    def __init__(self):
+        self.setup_time = 0
+        self.record = []
+    def setup(self, **kwargs):
+        self.setup_time += 1
+        self.record.append(kwargs)
+    
+class _Mock:
+    
+    def __init__(self):
+        self.setup_time = 0
+        
+    def setup(self, **kwargs):
+        self.setup_time += 1
+
+def test_recursive_setup():
+    a = _MockCounter()
+    b = _MockCounter()
+    c = _MockCounter()
+    d = _MockCounter()
+    e = _MockCounter()
+    f = _MockCounter()
+    
+    other_a = _Mock()
+    other_b = _Mock()
+    other_c = _Mock()
+    other_d = _Mock()
+    other_f = _Mock()
+    a.b = b
+    a.other_b = other_b
+    b.c = c
+    a.c = c
+    b.other_a = other_a
+    other_a.d = d
+    other_b.mocks = [a, b, c, e]
+    other_a.other_c = other_c
+    other_a.some_dict = {'other_f':other_f, 'f':f}
+    exp_once_items = [a, b, c, d, e, f]
+    exp_zeros_items = [other_a, other_b, other_c, other_d, other_f]
+    
+    data = {'some':'data'}
+    recursively_setup(a, **data)
+    
+    for o in exp_once_items:
+        eq_(1, o.setup_time)
+        eq_(data, o.record[0])
+        
+    for o in exp_zeros_items:
+        eq_(0, o.setup_time)
+    
+    
+
 if __name__ == '__main__':
     import nose
     nose.main()

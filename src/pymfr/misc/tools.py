@@ -4,6 +4,9 @@
 '''
 from collections import Sequence
 import numpy as np
+from pymfr.misc.mixin import SetupMixin
+import collections
+from numbers import Number
 
 class FieldProxy:
     def __init__(self, field_name, proxy_name):
@@ -83,4 +86,33 @@ def _raw_assign_2d(dst, i_indes, j_indes, src):
         for j in range(len(j_indes)):
             dst[i_indes[i], j_indes[j]] = src[i][j]
 
-        
+def _is_default_filtered(obj):
+    if obj is None:
+        return False
+    return isinstance(obj,(str,Number,bool,type,np.ndarray))
+
+def recursively_setup(_root_obj,**kwargs):
+    visited=set()
+    stack=[_root_obj]
+    while stack:
+        o=stack.pop()
+        if o is None:
+            continue
+        if _is_default_filtered(o):
+            continue
+        if isinstance(o,collections.Iterable):
+            if isinstance(o,dict):
+                stack.extend(t for t in o.values() if t is not None and not _is_default_filtered(t))
+            else:
+                stack.extend(t for t in o if t is not None and not _is_default_filtered(t))
+            continue
+        if not isinstance(o,collections.Hashable):
+            continue
+        if o in visited:
+            continue
+        if isinstance(o,SetupMixin):
+            o.setup(**kwargs)
+        visited.add(o)
+        o_dict=getattr(o,'__dict__',None)
+        if o_dict is not None:
+            stack.extend(t for t in o_dict.values() if t is not None and not _is_default_filtered(t))
