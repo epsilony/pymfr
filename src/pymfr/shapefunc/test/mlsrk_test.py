@@ -8,7 +8,7 @@ import unittest
 
 import numpy as np
 from pymfr.misc.kernel import PolynomialKernel
-from pymfr.misc.weight_func import WeightFunction, InfluencRadiusBasedNodeRegularDistance
+from pymfr.misc.weight_func import WeightFunction, RegularNodeRadiusBasedDistanceFunction
 from pymfr.shapefunc.mlsrk import MLSRK
 import sympy as sm
 from pymfr.misc.tools import twod_uniform_coords
@@ -199,7 +199,7 @@ class MLSRK_Test(unittest.TestCase):
     
     def weight_func(self, coords, radius):
         coord_rad_getter = lambda index:(coords[index], radius[index])
-        node_regular_dist_func = InfluencRadiusBasedNodeRegularDistance(coord_rad_getter)
+        node_regular_dist_func = RegularNodeRadiusBasedDistanceFunction(coord_rad_getter)
         return WeightFunction(node_regular_dist_func)        
 
     def _oned_uniform_coords(self, start, end, num):

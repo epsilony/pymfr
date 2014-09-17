@@ -5,7 +5,7 @@
 from injector import Module, provides, inject, Key, ClassProvider
 from pymfr.shapefunc.shape_func import CoredShapeFunction, ShapeFunction, ShapeFunctionCore, RawCoordRadiusGetter
 from pymfr.shapefunc.mlsrk import MLSRK
-from pymfr.misc.weight_func import WeightFunction, InfluencRadiusBasedNodeRegularDistance, TripleSpline
+from pymfr.misc.weight_func import WeightFunction, RegularNodeRadiusBasedDistanceFunction, TripleSpline
 
 ShapeWeightFunction = Key('shape_weight_function')
 ShapeWeightFunctionCore = Key('shape_weight_function_core')
@@ -34,5 +34,5 @@ class MLSRKShapeFunctionModule(Module):
     @inject(core=ShapeWeightFunctionCore)
     def shape_weight_function(self, core):
         coord_rad_getter = RawCoordRadiusGetter()
-        node_regular_dist_func = InfluencRadiusBasedNodeRegularDistance(coord_rad_getter)
+        node_regular_dist_func = RegularNodeRadiusBasedDistanceFunction(coord_rad_getter)
         return WeightFunction(node_regular_dist_func, core)

@@ -43,14 +43,14 @@ class WeightFunction(SPMixin):
     
     
     @SPMixin.spatial_dim.setter
-    def spatial_dim(self,value):
-        SPMixin.spatial_dim.fset(self,value)
-        self.node_regular_dist_func.spatial_dim=value
+    def spatial_dim(self, value):
+        SPMixin.spatial_dim.fset(self, value)
+        self.node_regular_dist_func.spatial_dim = value
     
     @SPMixin.partial_order.setter
-    def partial_order(self,value):
-        SPMixin.partial_order.fset(self,value)
-        self.node_regular_dist_func.partial_value=value
+    def partial_order(self, value):
+        SPMixin.partial_order.fset(self, value)
+        self.node_regular_dist_func.partial_value = value
     
     def __call__(self, x, index, out=None):
         partial_size = self.partial_size()
@@ -61,18 +61,18 @@ class WeightFunction(SPMixin):
         
         r = r_dists[0]
         out[0] = self.core(r)
-        for j in range(1,partial_size):
+        for j in range(1, partial_size):
             out[j] = self.core_deriv(r) * r_dists[j]
         return out
 
-class InfluencRadiusBasedNodeRegularDistance(SPMixin):
+class RegularNodeRadiusBasedDistanceFunction(SPMixin):
     
     def __init__(self, coord_rad_getter, spatial_dim=2, partial_order=1):
         self.coord_rad_getter = coord_rad_getter
         SPMixin.__init__(self, spatial_dim, partial_order)
     
     def __call__(self, x, index, out=None):
-        coord,rad = self.coord_rad_getter(index)
+        coord, rad = self.coord_rad_getter(index)
         
         diff = x - coord
         dist = np.linalg.norm(diff)
@@ -83,7 +83,7 @@ class InfluencRadiusBasedNodeRegularDistance(SPMixin):
         out[0] = dist / rad;
         if self.partial_order >= 1:
             
-            out[1:] =0 if 0==dist else diff / (rad * dist)
+            out[1:] = 0 if 0 == dist else diff / (rad * dist)
         return out
 
 class AllCoordRadiusGetter:
@@ -104,7 +104,7 @@ class AllCoordRadiusGetter:
     
 def weight_function(all_coord_radius, core=None):
     return WeightFunction(
-              InfluencRadiusBasedNodeRegularDistance(
+              RegularNodeRadiusBasedDistanceFunction(
                  AllCoordRadiusGetter(all_coord_radius)),
               core)
     
