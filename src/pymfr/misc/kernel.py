@@ -2,12 +2,14 @@
 
 @author: "epsilonyuan@gmail.com"
 '''
-from pymfr.misc.mixin import SPMixin
+from pymfr.misc.mixin import SPMixin, SetupMixin
 from pymfr.misc.math import partial_size
 import numpy as np
 from pymfr.misc.tools import FieldProxy
 
-class PolynomialKernel:
+class PolynomialKernel(SetupMixin):
+    
+    __optionals__ = [('kernel_order', 1)]
     
     def __init__(self, order=1, spatial_dim=2, partial_order=1):
         self._kernels = (PolynomialKernel1D(), PolynomialKernel2D())
