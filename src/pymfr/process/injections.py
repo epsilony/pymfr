@@ -11,6 +11,7 @@ from pymfr.process.load import LoadCalculator, SimpLoadCalculator
 from pymfr.process.process import SimpProcessorCore, SimpAssemblersConsumer, LagrangleDirichletProcessorCore, \
     SimpLagrangleDirichletConsumer, SimpProcessor
 from pymfr.process.assembler import VirtualLoadWorkAssembler, LagrangleDirichletLoadAssembler, PoissonVolumeAssembler
+from pymfr.process.post import SimpPostProcessor
 
 
 VolumeProcessorCore = Key('volume_processor_core')
@@ -141,3 +142,12 @@ def get_simp_poission_processor_modules(spatial_dim=2):
     lags = {1:LagrangleCommon1D, 2:LagrangleCommon2D}
     ret.append(lags[spatial_dim])
     return ret
+
+class SimpPostProcessorModule(Module):
+    
+    @provides(SimpPostProcessor)
+    @inject(support_node_searcher=SupportNodeSearcher,
+            shape_func=ShapeFunction,
+            )
+    def simp_post_processor(self, **kwargs):
+        return SimpPostProcessor(**kwargs)
