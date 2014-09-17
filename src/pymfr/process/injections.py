@@ -61,7 +61,7 @@ class SimpVolumeNeumannProcessorModule(Module):
             volume_load_assembler=VolumeLoadAssembler
             )
     def volume_process_consumer(self, volume_assembler, volume_load_assembler):
-        return SimpAssemblersConsumer((volume_assembler, volume_load_assembler))
+        return SimpAssemblersConsumer(volume_assembler, volume_load_assembler)
     
     @provides(VolumeLoadAssembler)
     def volume_load_assembler(self):
@@ -71,15 +71,15 @@ class SimpVolumeNeumannProcessorModule(Module):
     @inject(support_node_searcher=SupportNodeSearcher,
             shape_func=ShapeFunction,
             load_calculator=LoadCalculator,
-            consumer=NeumannProcessorCore,
+            consumer=NeumannProcessConsumer,
             )
     def neumann_processor_core(self, **kwargs):
         return SimpProcessorCore(**kwargs)
     
-    @provides(NeumannProcessorCore)
+    @provides(NeumannProcessConsumer)
     @inject(assembler=NeumannAssembler)
     def neumann_process_consumer(self, assembler):
-        return SimpAssemblersConsumer([assembler])
+        return SimpAssemblersConsumer(None, assembler)
     
     @provides(NeumannAssembler)
     def neumann_assembler(self):
