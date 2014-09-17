@@ -45,7 +45,10 @@ class SetupMixin:
     def setup(self, **kwargs):
         
         for name in getattr(self, '__prerequisites__', ()):
-            setattr(self, name, kwargs[name])
+            sv = kwargs.get(name, None)
+            if sv is None:
+                raise ValueError('miss prerequisite %s of %s' % (name, str(self)))
+            setattr(self, name, sv)
         
         for name, default in getattr(self, '__optionals__', ()):
             if name not in kwargs or kwargs[name] is None:
