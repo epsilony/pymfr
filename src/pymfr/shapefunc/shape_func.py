@@ -75,3 +75,25 @@ class LinearShapeFuntion(ShapeFunction, SetupMixin):
             ret[1:1 + self.spatial_dim, 1] = det / det_len / length
         
         return ret
+    
+class SoloShapeFunction(ShapeFunction, SetupMixin):
+    __prerequisites__ = ['spatial_dim']
+    __optionals__ = [('partial_order', 0)]    
+    def __call__(self, x, node_indes):
+        if len(node_indes) != 1:
+            raise ValueError()
+        
+        size = partial_size(self.spatial_dim, self.partial_order)
+        ret = np.zeros((size, 1))
+        ret[0, 0] = 1
+        
+        return ret
+
+class RawCoordRadiusGetter(SetupMixin):
+    
+    __prerequisites__ = ['node_coords', 'node_radiuses']
+    
+    def __call__(self, index):
+        return (self.node_coords[index], self.node_radiuses[index])
+    
+    
