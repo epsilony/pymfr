@@ -28,22 +28,22 @@ class CoredShapeFunction(ShapeFunction, SetupMixin):
         
     @property
     def partial_order(self):
-        return self.shape_func_core.partial_order
+        return self.shape_function_core.partial_order
     
     @partial_order.setter
     def partial_order(self, value):
-        self.shape_func_core.parital_order = value
+        self.shape_function_core.parital_order = value
     
     @property
     def spatial_dim(self):
-        return self.shape_func_core.spatial_dim
+        return self.shape_function_core.spatial_dim
     
     @spatial_dim.setter
     def spatial_dim(self, value):
-        self.shape_func_core.spatial_dim = value
+        self.shape_function_core.spatial_dim = value
     
     def __call__(self, x, node_indes):
-        return self.shape_func_core.calc(x, self.node_coords[node_indes], node_indes)
+        return self.shape_function_core.calc(x, self.node_coords[node_indes], node_indes)
 
 class LinearShapeFuntion(ShapeFunction, SetupMixin):
     __prerequisites__ = ['node_coords', 'spatial_dim']
