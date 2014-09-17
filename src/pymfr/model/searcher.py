@@ -341,6 +341,14 @@ class _SupportDomainNodeSegmentSearcher2D:
         sns = self.support_node_searcher
         node_indes = sns.search_indes(x)
         return node_indes
+
+class SupportNodeSearcher1D(SupportNodeSearcher,SetupMixin):
+    
+    def __init__(self,support_node_searcher):
+        self.support_node_searcher=support_node_searcher
+    
+    def search_indes(self,x,bnd):
+        return self.support_node_seacher.search_indes(x)
     
 class VisibleSupportNodeSearcher2D(SupportNodeSearcher, SetupMixin):
     
@@ -461,3 +469,11 @@ class VisibleSupportNodeSearcher2D(SupportNodeSearcher, SetupMixin):
         
         perturb_v = np.array((-v[1], v[0]), dtype=float)
         return perturb_ori + perturb_v * perturb_distance
+
+class SegmentLagrangleSupportNodeSearcher(SupportNodeSearcher):
+    def search_indes(self,x,bnd):
+        return (bnd.start.lagrangle_index,bnd.end.lagrangle_index)
+
+class NodeLagrangleSupportNodeSearcher(SupportNodeSearcher):
+    def search_indes(self,x,bnd):
+        return tuple(bnd.lagrangle_index)
