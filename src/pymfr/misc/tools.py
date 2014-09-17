@@ -89,30 +89,34 @@ def _raw_assign_2d(dst, i_indes, j_indes, src):
 def _is_default_filtered(obj):
     if obj is None:
         return False
-    return isinstance(obj,(str,Number,bool,type,np.ndarray))
+    return isinstance(obj, (str, Number, bool, type, np.ndarray))
 
-def recursively_setup(_root_obj,**kwargs):
-    visited=set()
-    stack=[_root_obj]
+def search_setup_mixins(_root_obj):
+    visited = set()
+    stack = [_root_obj]
     while stack:
-        o=stack.pop()
+        o = stack.pop()
         if o is None:
             continue
         if _is_default_filtered(o):
             continue
-        if isinstance(o,collections.Iterable):
-            if isinstance(o,dict):
+        if isinstance(o, collections.Iterable):
+            if isinstance(o, dict):
                 stack.extend(t for t in o.values() if t is not None and not _is_default_filtered(t))
             else:
                 stack.extend(t for t in o if t is not None and not _is_default_filtered(t))
             continue
-        if not isinstance(o,collections.Hashable):
+        if not isinstance(o, collections.Hashable):
             continue
         if o in visited:
             continue
-        if isinstance(o,SetupMixin):
-            o.setup(**kwargs)
+        if isinstance(o, SetupMixin):
+            yield o
         visited.add(o)
-        o_dict=getattr(o,'__dict__',None)
+        o_dict = getattr(o, '__dict__', None)
         if o_dict is not None:
             stack.extend(t for t in o_dict.values() if t is not None and not _is_default_filtered(t))
+
+def recursively_setup(_root_obj, **kwargs):
+    for obj in search_setup_mixins(_root_obj):
+        obj.setup(**kwargs)
