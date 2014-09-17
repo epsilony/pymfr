@@ -75,6 +75,42 @@ class SegmentQuadratureUnit(QuadratureUnit):
         if legendre_degree < 1 or legendre_degree > 10:
             raise ValueError()
         self.legendre_degree = legendre_degree
+
+class IntervalQuadratureUnit(QuadratureUnit):
+    
+    def __init__(self, father=None, load_key=None, interval=None, degree=2):
+        super().__init__(father, load_key)
+        self.interval = interval
+        self.degree = degree
+    
+    def gen_subunits(self):
+        legendre_degree = self.legendre_degree
+        
+        pts, weights = _GaussianQuadratureData._PTS_WEIGHTS_LIST[legendre_degree - 1]
+        interval = self.interval
+        start_coord = interval[0]
+        u = interval[1] - start_coord
+        interval_length = abs(interval[1] - interval[0])
+        
+        weight_factor = interval_length / 2
+        result = []
+        for pt, weight in zip(pts, weights):
+            coord = u * (pt + 1) / 2 + start_coord
+            qp_weight = weight * weight_factor
+            result.append(QuadraturePoint(self, None, qp_weight, coord, None))
+        
+        return result
+    
+    @property
+    def degree(self):
+        return int(ceil(self.legendre_degree * 2 - 1))
+        
+    @degree.setter
+    def degree(self, alg_degree):
+        legendre_degree = int(ceil((alg_degree + 1) / 2))
+        if legendre_degree < 1 or legendre_degree > 10:
+            raise ValueError()
+        self.legendre_degree = legendre_degree
         
 class SymmetricTriangleQuadratureUnit(QuadratureUnit):
     def __init__(self, father=None, load_key=None, triangle=None, degree=2):
@@ -204,3 +240,13 @@ class BilinearQuadrangleQuadratureUnit(QuadratureUnit):
         return x_coef, y_coef
 
         
+def iter_quadrature_units(quadrature_units):
+    stack = list(quadrature_units)
+    while stack:
+        qu = stack.pop()
+        if isinstance(qu, QuadraturePoint):
+            yield qu
+        else:
+            sub_units = qu.gen_subunits()
+            if sub_units is not None:
+                stack.extend(sub_units)
