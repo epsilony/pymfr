@@ -348,7 +348,7 @@ class SupportNodeSearcher1D(SupportNodeSearcher,SetupMixin):
         self.support_node_searcher=support_node_searcher
     
     def search_indes(self,x,bnd):
-        return self.support_node_seacher.search_indes(x)
+        return self.support_node_searcher.search_indes(x)
     
 class VisibleSupportNodeSearcher2D(SupportNodeSearcher, SetupMixin):
     
@@ -476,4 +476,4 @@ class SegmentLagrangleSupportNodeSearcher(SupportNodeSearcher):
 
 class NodeLagrangleSupportNodeSearcher(SupportNodeSearcher):
     def search_indes(self,x,bnd):
-        return tuple(bnd.lagrangle_index)
+        return (bnd.lagrangle_index,)
