@@ -5,8 +5,9 @@
 import numpy as np
 from pymfr.misc.math import partial_size
 from scipy.linalg import cho_solve, cho_factor
+from pymfr.misc.mixin import SetupMixin
 
-class MLSRK:
+class MLSRK(SetupMixin):
     """
     the important fields:
     
@@ -65,6 +66,10 @@ class MLSRK:
         _Bs[j].shape[0]: kernel_size
         _Bs[j].shape[1]: >= current nodes_size 
     """
+    
+    
+    __prerequisites__ = ['spatial_dim']
+    __optionals__ = [('partial_order', 1)]
     
     
     def __init__(self, weight_func, kernel, spatial_dim=2, partial_order=1):
