@@ -6,12 +6,6 @@ from pymfr.misc.tools import add_to_2d
 from injector import Key
 from pymfr.misc.mixin import SetupMixin
 
-VolumeAssembler = Key('volume_assembler')
-VolumeLoadAssembler = Key('volume_load_assmbler')
-NeumannAssembler = Key('neumann_assembler')
-DirichletAssembler = Key('dirichlet_assembler')
-
-
 class VirtualLoadWorkAssembler(SetupMixin):
     __prerequisites__ = ['vector', 'value_dim']
     
