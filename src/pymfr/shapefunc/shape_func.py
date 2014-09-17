@@ -10,7 +10,7 @@ from pymfr.misc.mixin import SetupMixin
 class ShapeFunctionCore(metaclass=ABCMeta):
     
     @abstractmethod
-    def calc(self, x, coords, node_indes):
+    def calc(self, x, node_coords, node_indes):
         pass
     
 class ShapeFunction(metaclass=ABCMeta):
@@ -20,8 +20,11 @@ class ShapeFunction(metaclass=ABCMeta):
         pass
 
 class CoredShapeFunction(ShapeFunction, SetupMixin):
-    __prerequisites__ = ['coords', 'spatial_dim']
+    __prerequisites__ = ['node_coords', 'spatial_dim']
     __optionals__ = [('partial_order', 0)]
+    
+    def __init__(self, shape_function_core):
+        self.shape_function_core = shape_function_core
         
     @property
     def partial_order(self):
@@ -40,18 +43,15 @@ class CoredShapeFunction(ShapeFunction, SetupMixin):
         self.shape_func_core.spatial_dim = value
     
     def __call__(self, x, node_indes):
-        return self.shape_func_core.calc(x, self.coords[node_indes], node_indes)
+        return self.shape_func_core.calc(x, self.node_coords[node_indes], node_indes)
 
-class LinearShapeFuntion(ShapeFunction):
+class LinearShapeFuntion(ShapeFunction, SetupMixin):
+    __prerequisites__ = ['node_coords', 'spatial_dim']
+    __optionals__ = [('partial_order', 0)]
     
-    def __init__(self, spatial_dim=1, partial_order=0):
+    def __init__(self, spatial_dim=2, partial_order=0):
         self.spatial_dim = spatial_dim
         self.partial_order = partial_order
-    
-    def setup(self, **kwargs):
-        self.coords = kwargs['coords']
-        self.spatial_dim = kwargs.get('spatial_dim', 1)
-        self.partial_order = kwargs.get('partial_order', 0)
     
     def __call__(self, x, node_indes):
         if len(node_indes) != 2:
@@ -60,7 +60,7 @@ class LinearShapeFuntion(ShapeFunction):
         size = partial_size(self.spatial_dim, self.partial_order)
         ret = np.empty((size, 2))
         
-        coord_0, coord_1 = self.coords[node_indes]
+        coord_0, coord_1 = self.node_coords[node_indes]
         
         length = np.linalg.norm(coord_0 - coord_1)
         det = x - coord_0

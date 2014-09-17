@@ -15,9 +15,7 @@ def test_linear_shape_func():
     lsf = LinearShapeFuntion()
     
     
-    lsf.setup(coords=coords)
-    lsf.spatial_dim = 3
-    lsf.partial_order = 1
+    lsf.setup(node_coords=coords, spatial_dim=3, partial_order=1)
     
     t = 0.3
     

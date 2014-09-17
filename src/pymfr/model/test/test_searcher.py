@@ -152,8 +152,8 @@ def test_raw_kdtree_cmp_support_node_searcher():
     rads = rads + 1
     rads = np.abs(rads)
     
-    raw_searcher = RawSupportNodeSearcher().setup(nodes=nodes, rads=rads)
-    kd_searcher = KDTreeSupportNodeSearcher().setup(nodes=nodes, rads=rads)
+    raw_searcher = RawSupportNodeSearcher().setup(nodes=nodes, node_radiuses=rads)
+    kd_searcher = KDTreeSupportNodeSearcher().setup(nodes=nodes, node_radiuses=rads)
     
     xs_size = 20
     xs = np.random.rand(xs_size, 2)
@@ -260,7 +260,7 @@ def _visible_support_domain_data():
     support_node_searcher = MockSupportNodesSearcher()
     support_node_searcher.mock_indes = [node.index for node in nodes]
     support_node_searcher.nodes = [None if i % 2 == 0 else nodes[i // 2] for i in range(2 * len(nodes))]
-    support_node_searcher.coords = [None if node is None else node.coord for node in support_node_searcher.nodes]
+    support_node_searcher.node_coords = [None if node is None else node.coord for node in support_node_searcher.nodes]
     
     segment_searcher = MockSegmentsSearcher()
     segment_searcher.mock_indes = [segment.index for segment in segments]
