@@ -88,25 +88,24 @@ def _raw_assign_2d(dst, i_indes, j_indes, src):
 
 def _is_default_filtered(obj):
     if obj is None:
-        return False
+        return True
     return isinstance(obj, (str, Number, bool, type, np.ndarray))
 
 def search_setup_mixins(_root_obj):
     visited = set()
+    if _is_default_filtered(_root_obj):
+        return
     stack = [_root_obj]
     while stack:
         o = stack.pop()
-        if o is None:
+        if isinstance(o, (collections.Mapping)):
+            stack.extend(t for t in o.values() if t is not None and not _is_default_filtered(t))
             continue
-        if _is_default_filtered(o):
-            continue
-        if isinstance(o, collections.Iterable):
-            if isinstance(o, dict):
-                stack.extend(t for t in o.values() if t is not None and not _is_default_filtered(t))
-            else:
-                stack.extend(t for t in o if t is not None and not _is_default_filtered(t))
-            continue
-        if not isinstance(o, collections.Hashable):
+        if isinstance(o, (collections.Set, collections.Sequence, collections.MutableSequence)):
+            stack.extend(t for t in o if t is not None and not _is_default_filtered(t))
+        try:
+            o.__hash__()
+        except TypeError:
             continue
         if o in visited:
             continue
@@ -120,3 +119,43 @@ def search_setup_mixins(_root_obj):
 def recursively_setup(_root_obj, **kwargs):
     for obj in search_setup_mixins(_root_obj):
         obj.setup(**kwargs)
+
+class SetupStatus:
+    def __init__(self):
+        self.setables = set()
+        self.pres = {}
+        self.unset_pres = {}
+        self.opts = {}
+        self.undefault_opts = {}
+        self.unset_opts = {}
+    
+
+    
+def gen_setup_status(root_obj):
+    ss = search_setup_mixins(root_obj)
+    ret = SetupStatus()
+    for s in ss:
+        ret.setables.add(s)
+        for name in getattr(s, '__prerequisites__', ()):
+            if not name in ret.pres:
+                ret.pres[name] = set()
+            ret.pres[name].add(s)
+            if getattr(s, name, None) is None:
+                if not name in ret.unset_pres:
+                    ret.unset_pres[name] = set()
+                ret.unset_pres[name].add(s)
+                
+        for name, df in getattr(s, '__optionals__', ()):
+            if not name in ret.opts:
+                ret.opts[name] = set()
+            ret.opts[name].add(s)
+            v = getattr(s, name, None)
+            if v is None:
+                if not name in ret.unset_opts:
+                    ret.unset_opts[name] = set()
+                ret.unset_opts[name].add(s)
+            elif v != df:
+                if not name in ret.undefault_opts:
+                    ret.undefault_opts[name] = set()
+                ret.undefault_opts[name].add(s)
+    return ret
