@@ -3,14 +3,17 @@
 @author: "epsilonyuan@gmail.com"
 '''
 from abc import ABCMeta, abstractmethod
+from pymfr.misc.mixin import SetupMixin
 
 class LoadCalculator(metaclass=ABCMeta):
     
     @abstractmethod
-    def __call__(self,load_key,coord,bnd):
+    def __call__(self, load_key, coord, bnd):
         pass
 
-class SimpLoadCalculator(LoadCalculator):
+class SimpLoadCalculator(LoadCalculator, SetupMixin):
+    
+    __prerequisites__ = ['load_map']
     
     def __init__(self, load_map=None):
         if load_map is None:

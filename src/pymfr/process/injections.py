@@ -3,15 +3,14 @@
 @author: "epsilonyuan@gmail.com"
 '''
 
-from injector import Module, provides, inject, Key
-from pymfr.model.searcher import SupportNodeSearcher, SegmentLagrangleSupportNodeSearcher,\
+from injector import Module, provides, inject, Key, ClassProvider, singleton
+from pymfr.model.searcher import SupportNodeSearcher, SegmentLagrangleSupportNodeSearcher, \
     NodeLagrangleSupportNodeSearcher
 from pymfr.shapefunc.shape_func import ShapeFunction, LinearShapeFuntion, SoloShapeFunction
-from pymfr.process.load import LoadCalculator
+from pymfr.process.load import LoadCalculator, SimpLoadCalculator
 from pymfr.process.process import SimpProcessorCore, SimpAssemblersConsumer, LagrangleDirichletProcessorCore, \
     SimpLagrangleDirichletConsumer, SimpProcessor
 from pymfr.process.assembler import VirtualLoadWorkAssembler, LagrangleDirichletLoadAssembler, PoissonVolumeAssembler
-from _ftdi1 import SPACE
 
 
 VolumeProcessorCore = Key('volume_processor_core')
@@ -32,6 +31,11 @@ LagrangleShapeFunction = Key('lagrangle_shape_function')
 
 
 class SimpProcessorModule(Module):
+    
+    load_calculator_cls = SimpLoadCalculator
+    
+    def configure(self, binder):
+        binder.bind(LoadCalculator, to=ClassProvider(self.load_calculator_cls), scope=singleton)
     @provides(SimpProcessor)
     @inject(
             volume_core=VolumeProcessorCore,
@@ -129,11 +133,11 @@ class LagrangleCommon1D(Module):
         return NodeLagrangleSupportNodeSearcher()
 
 def get_simp_poission_processor_modules(spatial_dim=2):
-    ret = [SimpProcessorModule, 
+    ret = [SimpProcessorModule,
             SimpVolumeNeumannProcessorModule,
             LagrangleDirichletProcessorModule,
             PoissonVolumeAssemblerModule
             ]
-    lags={1:LagrangleCommon1D,2:LagrangleCommon2D}
+    lags = {1:LagrangleCommon1D, 2:LagrangleCommon2D}
     ret.append(lags[spatial_dim])
     return ret

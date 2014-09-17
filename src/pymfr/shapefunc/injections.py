@@ -15,7 +15,7 @@ class MLSRKShapeFunctionModule(Module):
 
     shape_weight_function_core_cls = TripleSpline
     
-    def configurature(self, binder):
+    def configure(self, binder):
         binder.bind(ShapeWeightFunctionCore, to=ClassProvider(self.shape_weight_function_core_cls))
     
     @provides(ShapeFunction)
