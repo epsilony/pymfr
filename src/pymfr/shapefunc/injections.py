@@ -2,10 +2,10 @@
 
 @author: "epsilonyuan@gmail.com"
 '''
-from injector import Module, provides, inject, Key, ClassProvider
+from injector import Module, provides, inject, Key, ClassProvider, InstanceProvider
 from pymfr.shapefunc.shape_func import CoredShapeFunction, ShapeFunction, ShapeFunctionCore, RawCoordRadiusGetter
 from pymfr.shapefunc.mlsrk import MLSRK
-from pymfr.misc.weight_func import WeightFunction, RegularNodeRadiusBasedDistanceFunction, TripleSpline
+from pymfr.misc.weight_func import WeightFunction, RegularNodeRadiusBasedDistanceFunction, triple_spline
 from pymfr.misc.kernel import PolynomialKernel
 
 ShapeWeightFunction = Key('shape_weight_function')
@@ -14,13 +14,13 @@ ShapeKernelFunction = Key('shape_kernel_function')
 
 class MLSRKShapeFunctionModule(Module):
 
-    shape_weight_function_core_cls = TripleSpline
+    shape_weight_function_core_provider = InstanceProvider(triple_spline)
     
-    def __init__(self,kernel_order=1):
-        self.kernel_order=1
+    def __init__(self, kernel_order=1):
+        self.kernel_order = 1
     
     def configure(self, binder):
-        binder.bind(ShapeWeightFunctionCore, to=ClassProvider(self.shape_weight_function_core_cls))
+        binder.bind(ShapeWeightFunctionCore, to=self.shape_weight_function_core_provider)
     
     @provides(ShapeFunction)
     @inject(shape_function_core=ShapeFunctionCore)
@@ -43,7 +43,7 @@ class MLSRKShapeFunctionModule(Module):
 
     @provides(ShapeKernelFunction)
     def shape_kernel_Function(self):
-        ret=PolynomialKernel()
-        ret.order=self.kernel_order
+        ret = PolynomialKernel()
+        ret.order = self.kernel_order
         return ret
         

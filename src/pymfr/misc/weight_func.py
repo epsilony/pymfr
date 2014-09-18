@@ -30,10 +30,33 @@ class TripleSpline:
         res._right = res._right.deriv()
         return res
 
+def triple_spline(x):
+    if x >= 1:
+        return 0
+    elif x > 0.5:
+        return 4 / 3 - 4 * x + 4 * x ** 2 - 4 / 3 * x ** 3
+    elif x >= 0:
+        return 2 / 3 - 4 * x ** 2 + 4 * x ** 3
+    else:
+        raise ValueError()
+
+def triple_spline_diff(x):
+    if x >= 1:
+        return 0
+    elif x > 0.5:
+        return -4 + 8 * x - 4 * x ** 2
+    elif x >= 0:
+        return -8 * x + 12 * x ** 2
+    else:
+        raise ValueError()
+
+triple_spline.deriv = lambda :triple_spline_diff
+        
+
 class WeightFunction(SPMixin):
     def __init__(self, node_regular_dist_func, core=None, spatial_dim=2, partial_order=1):
         if not core:
-            core = TripleSpline()
+            core = triple_spline
         self.core = core
         self.core_deriv = core.deriv()
         self.node_regular_dist_func = node_regular_dist_func
@@ -77,7 +100,7 @@ class RegularNodeRadiusBasedDistanceFunction(SPMixin):
         diff = x - coord
         dist = np.linalg.norm(diff)
         
-        if not out:
+        if out is None:
             out = np.empty((self.partial_size(),))
         
         out[0] = dist / rad;
