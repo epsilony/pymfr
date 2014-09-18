@@ -4,8 +4,6 @@
 '''
 from numpy.polynomial import Polynomial
 import numpy as np
-from math import sqrt
-from pymfr.misc.math import partial_size
 from pymfr.misc.mixin import SPMixin
 
 class TripleSpline:
@@ -84,8 +82,9 @@ class WeightFunction(SPMixin):
         
         r = r_dists[0]
         out[0] = self.core(r)
+        td = self.core_deriv(r)
         for j in range(1, partial_size):
-            out[j] = self.core_deriv(r) * r_dists[j]
+            out[j] = td * r_dists[j]
         return out
 
 class RegularNodeRadiusBasedDistanceFunction(SPMixin):
@@ -94,19 +93,29 @@ class RegularNodeRadiusBasedDistanceFunction(SPMixin):
         self.coord_rad_getter = coord_rad_getter
         SPMixin.__init__(self, spatial_dim, partial_order)
     
+    def _dist(self, diff):
+        spatial_dim = self.spatial_dim
+        if spatial_dim == 1:
+            return abs(diff[0])
+        else:
+            return np.dot(diff, diff) ** 0.5
+    
     def __call__(self, x, index, out=None):
         coord, rad = self.coord_rad_getter(index)
         
         diff = x - coord
-        dist = np.linalg.norm(diff)
+        dist = self._dist(diff)
         
         if out is None:
             out = np.empty((self.partial_size(),))
         
-        out[0] = dist / rad;
         if self.partial_order >= 1:
-            
-            out[1:] = 0 if 0 == dist else diff / (rad * dist)
+            if 0 == dist:
+                out.fill(0)
+            else:
+                out[1:] = diff
+                np.divide(out, rad * dist, out)
+        out[0] = dist / rad;
         return out
 
 class AllCoordRadiusGetter:
