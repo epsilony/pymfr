@@ -60,7 +60,7 @@ class LinearShapeFuntion(ShapeFunction, SetupMixin):
         size = partial_size(self.spatial_dim, self.partial_order)
         ret = np.empty((size, 2))
         
-        coord_0, coord_1 = self.node_coords[node_indes]
+        coord_0, coord_1 = self.node_coords[node_indes[0]], self.node_coords[node_indes[1]]
         
         length = np.linalg.norm(coord_0 - coord_1)
         det = x - coord_0
