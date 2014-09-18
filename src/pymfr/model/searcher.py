@@ -176,8 +176,8 @@ class KDTreeSegmentSearcher(SegmentSearcher, SetupMixin):
     def rough_search_indes(self, x, rad, eps=0):
         r = (rad + self.rad_plus) * (1 + eps)
         indes = self.kd_tree.query_ball_point(x, r, eps=eps)
-        indes_generation = self._indes_generation
         if self.medium_indes is not None:
+            indes_generation = self._indes_generation
             self._shift_current_generation()
             medium_indes = self.medium_indes
             current_generation = self._current_generation
@@ -287,13 +287,15 @@ class KDTreeSupportNodeSearcher(SupportNodeSearcher, SetupMixin):
             self.medium_indes = np.array(medium_indes, dtype=int)
             self._indes_generation = np.zeros(len(self.nodes), dtype=int)
             self._current_generation = 1
+        else:
+            self.medium_indes = None
         self.kd_tree = KDTree(keys)
                 
     def search_indes(self, x):
         r = self.loosen
         indes = self.kd_tree.query_ball_point(x, r, p=float('inf'))
-        indes_generation = self._indes_generation
         if self.medium_indes is not None:
+            indes_generation = self._indes_generation
             self._shift_current_generation()
             medium_indes = self.medium_indes
             current_generation = self._current_generation
@@ -342,12 +344,12 @@ class _SupportDomainNodeSegmentSearcher2D:
         node_indes = sns.search_indes(x)
         return node_indes
 
-class SupportNodeSearcher1D(SupportNodeSearcher,SetupMixin):
+class SupportNodeSearcher1D(SupportNodeSearcher, SetupMixin):
     
-    def __init__(self,support_node_searcher):
-        self.support_node_searcher=support_node_searcher
+    def __init__(self, support_node_searcher):
+        self.support_node_searcher = support_node_searcher
     
-    def search_indes(self,x,bnd):
+    def search_indes(self, x, bnd):
         return self.support_node_searcher.search_indes(x)
     
 class VisibleSupportNodeSearcher2D(SupportNodeSearcher, SetupMixin):
@@ -361,12 +363,12 @@ class VisibleSupportNodeSearcher2D(SupportNodeSearcher, SetupMixin):
               ):
         
         self.setup(perturb_distance=perturb_distance)
-        self.support_node_searcher = _SupportDomainNodeSegmentSearcher2D(support_node_searcher, segment_searcher)
-        self.support_node_searhcer = support_node_searcher
+        self._sdnss = _SupportDomainNodeSegmentSearcher2D(support_node_searcher, segment_searcher)
+        self.support_node_searcher = support_node_searcher
         self.segment_searcher = segment_searcher
 
     def search_indes(self, x, bnd=None):
-        node_indes, segment_indes = self.support_node_searcher.search_node_segment_indes(x)
+        node_indes, segment_indes = self._sdnss.search_node_segment_indes(x)
         if len(segment_indes) == 0:
             return node_indes
         else:
@@ -383,7 +385,7 @@ class VisibleSupportNodeSearcher2D(SupportNodeSearcher, SetupMixin):
             if np.cross(seg.end.coord - seg.start.coord, pb_x - seg.start.coord) > 0:
                 segs.append(seg)
         
-        all_nodes = self.support_node_searhcer.nodes
+        all_nodes = self.support_node_searcher.nodes
         
         
         filtered_mask = np.zeros(len(node_indes), dtype=np.byte)
@@ -471,9 +473,9 @@ class VisibleSupportNodeSearcher2D(SupportNodeSearcher, SetupMixin):
         return perturb_ori + perturb_v * perturb_distance
 
 class SegmentLagrangleSupportNodeSearcher(SupportNodeSearcher):
-    def search_indes(self,x,bnd):
-        return (bnd.start.lagrangle_index,bnd.end.lagrangle_index)
+    def search_indes(self, x, bnd):
+        return [bnd.start.lagrangle_index, bnd.end.lagrangle_index]
 
 class NodeLagrangleSupportNodeSearcher(SupportNodeSearcher):
-    def search_indes(self,x,bnd):
+    def search_indes(self, x, bnd):
         return (bnd.lagrangle_index,)
