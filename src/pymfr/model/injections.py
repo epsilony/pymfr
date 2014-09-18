@@ -4,7 +4,7 @@
 '''
 from injector import Module, provides, Key, inject, ClassProvider
 from pymfr.model.searcher import SupportNodeSearcher1D, RawSupportNodeSearcher, SupportNodeSearcher, \
-    VisibleSupportNodeSearcher2D, SegmentSearcher, KDTreeSegmentSearcher, KDTreeNodeSearcher
+    VisibleSupportNodeSearcher2D, SegmentSearcher, KDTreeSegmentSearcher, KDTreeSupportNodeSearcher
 
 CoreSupportNodeSearcher = Key('core_support_node_searcher')
 
@@ -22,7 +22,7 @@ class TwoDVisibleSupportNodeSearcherModule(Module):
     
     def __init__(self, core_node_searcher_cls=None, segment_searcher_cls=None):
         self.core_node_searcher_cls = (core_node_searcher_cls if core_node_searcher_cls is not None 
-                                  else KDTreeNodeSearcher)
+                                  else KDTreeSupportNodeSearcher)
         self.segment_searcher_cls = (segment_searcher_cls if segment_searcher_cls is not None 
                                      else KDTreeSegmentSearcher)
         super().__init__()
