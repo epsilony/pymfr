@@ -205,10 +205,11 @@ class BilinearQuadrangleQuadratureUnit(QuadratureUnit):
     
     _MAT_INV = np.linalg.inv(_MAT)
     
-    def __init__(self, father=None, load_key=None, quadrangle=None, degree=2):
+    def __init__(self, father=None, load_key=None, quadrangle=None, degree=2, as_bnd=False):
         super().__init__(father, load_key)
         self.quadrangle = quadrangle
         self.degree = degree
+        self.as_bnd = as_bnd
         
     def gen_subunits(self):
         x_coef, y_coef = self._calc_bilinear_map_coefs()
@@ -229,7 +230,7 @@ class BilinearQuadrangleQuadratureUnit(QuadratureUnit):
                               [y_coef[1] + y_coef[3] * v, y_coef[2] + y_coef[3] * u]  
                                 ], dtype=float)
                 
-                results.append(QuadraturePoint(self, None, abs(np.linalg.det(jacob)) * w, coord, self.quadrangle))
+                results.append(QuadraturePoint(self, None, abs(np.linalg.det(jacob)) * w, coord, self.quadrangle if self.as_bnd else None))
         return results
         
     def _calc_bilinear_map_coefs(self):
