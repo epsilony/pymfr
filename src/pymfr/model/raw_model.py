@@ -30,12 +30,12 @@ class OneDModel:
             volume_quadrature_units.append(iqu)
         self.volume_quadrature_units = volume_quadrature_units
         
-        self.neumann_quadrature_units=[]
+        self.neumann_quadrature_units = []
         for neumann_node in self.neumann_nodes:
             self.neumann_quadrature_units.append(
                            QuadraturePoint(None, neumann_node, 1, neumann_node.coord, neumann_node))
         
-        self.dirichlet_quadrature_units=[]
+        self.dirichlet_quadrature_units = []
         for dirichlet_node in self.dirichlet_nodes:
             self.dirichlet_quadrature_units.append(
                            QuadraturePoint(None, dirichlet_node, 1, dirichlet_node.coord, dirichlet_node))
@@ -50,5 +50,4 @@ class OneDModel:
     
     def set_volume_load(self, load_core):
         self.load_map['volume'] = load_core
-    
     
