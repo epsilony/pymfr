@@ -2,10 +2,11 @@
 
 @author: "epsilonyuan@gmail.com"
 '''
-from pymfr.misc.mixin import SPMixin, SetupMixin
+from pymfr.misc.mixin import SetupMixin
 from pymfr.misc.math import partial_size
 import numpy as np
 from pymfr.misc.tools import FieldProxy
+from numba import jit
 
 class PolynomialKernel(SetupMixin):
     
@@ -89,59 +90,40 @@ class _PolynomialKernelBase:
     @property
     def size(self):
         return partial_size(self.spatial_dim, self.order)
+
+def _calc_1_10(x, out):
+    out[0, 0], out[0, 1] = 1, x
     
+def _calc_1_11(x, out):
+    _calc_1_10(x, out)
+    out[1, 0], out[1, 1] = 0, 1
+
+def _calc_1_20(x, out):
+    out[0, 0], out[0, 1], out[0, 2] = 1, x, x * x
+
+def _calc_1_21(x, out):
+    _calc_1_20(x, out)
+    out[1, 0], out[1, 1], out[1, 2] = 0, 1, 2 * x
+
+def _calc_1_30(x, out):
+    out[0, 0], out[0, 1], out[0, 2], out[0, 3] = 1, x, x * x, x * x * x
+   
+def _calc_1_31(x, out):
+    _calc_1_30(x, out)
+    out[1, 0], out[1, 1], out[1, 2], out[1, 3] = 0, 1, 2 * x, 3 * x * x
+
+
 class PolynomialKernel1D(_PolynomialKernelBase):
     
     def __init__(self, order=1, partial_order=1):
         super(PolynomialKernel1D, self).__init__(1, order, partial_order)
         self._calcs = (
-             self.__calc10__,
-             self.__calc11__,
-             self.__calc20__,
-             self.__calc21__,
-             self.__calc30__,
-             self.__calc31__)
-        
-    def __call__(self, x, out=None):
-        if not out:
-            out = np.empty((self.partial_size(), self.size))
-        magic = 2
-        calc = self._calcs[(self.order - 1) * magic + self.partial_order]
-        calc(x, out)
-        return out
-    
-    def __calc10__(self, x, out):
-        out[0, 0], out[0, 1] = 1, x
-    
-    def __calc11__(self, x, out):
-        self.__calc10__(x, out)
-        out[1, 0], out[1, 1] = 0, 1
-    
-    def __calc20__(self, x, out):
-        out[0, 0], out[0, 1], out[0, 2] = 1, x, x * x
-    
-    def __calc21__(self, x, out):
-        self.__calc20__(x, out)
-        out[1, 0], out[1, 1], out[1, 2] = 0, 1, 2 * x
-    
-    def __calc30__(self, x, out):
-        out[0, 0], out[0, 1], out[0, 2], out[0, 3] = 1, x, x * x, x * x * x
-        
-    def __calc31__(self, x, out):
-        self.__calc30__(x, out)
-        out[1, 0], out[1, 1], out[1, 2], out[1, 3] = 0, 1, 2 * x, 3 * x * x
-        
-class PolynomialKernel2D(_PolynomialKernelBase):
-    
-    def __init__(self, order=1, partial_order=1):
-        super(PolynomialKernel2D, self).__init__(2, order, partial_order)
-        self._calcs = (
-             self.__calc10__,
-             self.__calc11__,
-             self.__calc20__,
-             self.__calc21__,
-             self.__calc30__,
-             self.__calc31__)
+             _calc_1_10,
+             _calc_1_11,
+             _calc_1_20,
+             _calc_1_21,
+             _calc_1_30,
+             _calc_1_31)
         
     def __call__(self, x, out=None):
         if not out:
@@ -151,41 +133,63 @@ class PolynomialKernel2D(_PolynomialKernelBase):
         calc(x, out)
         return out
 
-    def __calc10__(self, x, out):
-        out[0, 0], out[0, 1], out[0, 2] = 1, x[0], x[1]
+
+def _calc_2_10(x, out):
+    out[0, 0], out[0, 1], out[0, 2] = 1, x[0], x[1]
+    
+
+def _calc_2_11(x, out):
+    out[0, 0], out[0, 1], out[0, 2] = 1, x[0], x[1]
+    out[1, 0], out[1, 1], out[1, 2] = 0, 1, 0
+    out[2, 0], out[2, 1], out[2, 2] = 0, 0, 1
+
+def _calc_2_20(x, out):
+    x0 = x[0]
+    x1 = x[1]
+    out[0, 0], out[0, 1], out[0, 2], out[0, 3], out[0, 4], out[0, 5] = 1, x0, x1, x0 * x0, x0 * x1, x1 * x1
+    
+def _calc_2_21(x, out):
+    x0 = x[0]
+    x1 = x[1]
+    out[0, 0], out[0, 1], out[0, 2], out[0, 3], out[0, 4], out[0, 5] = 1, x0, x1, x0 * x0, x0 * x1, x1 * x1
+    out[1, 0], out[1, 1], out[1, 2], out[1, 3], out[1, 4], out[1, 5] = 0, 1, 0, 2 * x0, x1, 0
+    out[2, 0], out[2, 1], out[2, 2], out[2, 3], out[2, 4], out[2, 5] = 0, 0, 1, 0, x0, 2 * x1   
+
+def _calc_2_30(x, out):
+    _calc_2_20(x, out)
+    out[0][6:] = (x[0] ** 3, x[0] ** 2 * x[1], x[0] * x[1] ** 2, x[1] ** 3)
+
+def _calc_2_31(x, out):
+    x0 = x[0]
+    x1 = x[1]
+    out[0, 0], out[0, 1], out[0, 2], out[0, 3], out[0, 4], out[0, 5] = 1, x0, x1, x0 * x0, x0 * x1, x1 * x1
+    out[1, 0], out[1, 1], out[1, 2], out[1, 3], out[1, 4], out[1, 5] = 0, 1, 0, 2 * x0, x1, 0
+    out[2, 0], out[2, 1], out[2, 2], out[2, 3], out[2, 4], out[2, 5] = 0, 0, 1, 0, x0, 2 * x1   
+    
+    out[0, 6], out[0, 7], out[0, 8], out[0, 9] = x0 * x0 * x0, x0 * x0 * x1, x0 * x1 * x1, x1 * x1 * x1
+    out[1, 6], out[1, 7], out[1, 8], out[1, 9] = 3 * x0 * x0, 2 * x0 * x1, x1 * x1, 0
+    out[2, 6], out[2, 7], out[2, 8], out[2, 9] = 0, x0 * x0, 2 * x0 * x1, 3 * x1 * x1
+     
+class PolynomialKernel2D(_PolynomialKernelBase):
+    
+    def __init__(self, order=1, partial_order=1):
+        super(PolynomialKernel2D, self).__init__(2, order, partial_order)
+        self._calcs = (
+             _calc_2_10,
+             _calc_2_11,
+             _calc_2_20,
+             _calc_2_21,
+             _calc_2_30,
+             _calc_2_31)
         
-    
-    def __calc11__(self, x, out):
-        out[0, 0], out[0, 1], out[0, 2] = 1, x[0], x[1]
-        out[1, 0], out[1, 1], out[1, 2] = 0, 1, 0
-        out[2, 0], out[2, 1], out[2, 2] = 0, 0, 1
-    
-    def __calc20__(self, x, out):
-        x0 = x[0]
-        x1 = x[1]
-        out[0, 0], out[0, 1], out[0, 2], out[0, 3], out[0, 4], out[0, 5] = 1, x0, x1, x0 * x0, x0 * x1, x1 * x1
-        
-    def __calc21__(self, x, out):
-        x0 = x[0]
-        x1 = x[1]
-        out[0, 0], out[0, 1], out[0, 2], out[0, 3], out[0, 4], out[0, 5] = 1, x0, x1, x0 * x0, x0 * x1, x1 * x1
-        out[1, 0], out[1, 1], out[1, 2], out[1, 3], out[1, 4], out[1, 5] = 0, 1, 0, 2 * x0, x1, 0
-        out[2, 0], out[2, 1], out[2, 2], out[2, 3], out[2, 4], out[2, 5] = 0, 0, 1, 0, x0, 2 * x1   
-    
-    def __calc30__(self, x, out):
-        self.__calc20__(x, out)
-        out[0][6:] = (x[0] ** 3, x[0] ** 2 * x[1], x[0] * x[1] ** 2, x[1] ** 3)
-    
-    def __calc31__(self, x, out):
-        x0 = x[0]
-        x1 = x[1]
-        out[0, 0], out[0, 1], out[0, 2], out[0, 3], out[0, 4], out[0, 5] = 1, x0, x1, x0 * x0, x0 * x1, x1 * x1
-        out[1, 0], out[1, 1], out[1, 2], out[1, 3], out[1, 4], out[1, 5] = 0, 1, 0, 2 * x0, x1, 0
-        out[2, 0], out[2, 1], out[2, 2], out[2, 3], out[2, 4], out[2, 5] = 0, 0, 1, 0, x0, 2 * x1   
-        
-        out[0, 6], out[0, 7], out[0, 8], out[0, 9] = x0 * x0 * x0, x0 * x0 * x1, x0 * x1 * x1, x1 * x1 * x1
-        out[1, 6], out[1, 7], out[1, 8], out[1, 9] = 3 * x0 * x0, 2 * x0 * x1, x1 * x1, 0
-        out[2, 6], out[2, 7], out[2, 8], out[2, 9] = 0, x0 * x0, 2 * x0 * x1, 3 * x1 * x1
+    def __call__(self, x, out=None):
+        if not out:
+            out = np.empty((self.partial_size(), self.size))
+        magic = 2
+        calc = self._calcs[(self.order - 1) * magic + self.partial_order]
+        calc(x, out)
+        return out
+
         
     
         
