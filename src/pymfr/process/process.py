@@ -37,6 +37,40 @@ class SimpProcessorCore:
                           load,
                           load_validity)
 
+class SimpMechanicalVolumeProcessorCore(SetupMixin):
+    
+    __prerequisites__ = ['constitutive_law_func']
+    def __init__(self,
+                 support_node_searcher,
+                 shape_func,
+                 load_calculator,
+                 consumer
+                 ):
+        self.support_node_searcher = support_node_searcher
+        self.load_calculator = load_calculator
+        self.shape_func = shape_func
+        self.consumer = consumer
+    
+    def process(self, quadrature_points):
+        for quadrature_point in quadrature_points:
+            node_indes = self.support_node_searcher.search_indes(
+                                quadrature_point.coord,
+                                quadrature_point.bnd)
+            shape_func_value = self.shape_func(
+                               quadrature_point.coord,
+                               node_indes)
+            load_val = self.load_calculator(
+                                            quadrature_point.load_key,
+                                            quadrature_point.coord,
+                                            quadrature_point.bnd
+                                              )
+            (load, _load_validity) = (None, None) if load_val is None else load_val
+            constitutive_law = self.constitutive_law_func(quadrature_point.coord)
+            self.consumer(quadrature_point.weight,
+                          node_indes,
+                          shape_func_value,
+                          load,
+                          constitutive_law)
 
 class LagrangleDirichletProcessorCore(SetupMixin):
     
@@ -93,6 +127,17 @@ class SimpAssemblersConsumer:
     def __call__(self, weight, node_indes, shape_func_value, load, load_validity):
         if self.volume_assembler is not None:
             self.volume_assembler.assemble(weight, node_indes, shape_func_value)
+        if self.load_assembler is not None and load is not None:
+            self.load_assembler.assemble(weight, node_indes, shape_func_value, load=load)
+
+class SimpMechanicalVolumeConsumer:
+    def __init__(self, volume_assembler=None, load_assembler=None):
+        self.volume_assembler = volume_assembler
+        self.load_assembler = load_assembler
+    
+    def __call__(self, weight, node_indes, shape_func_value, load, constitutive_law):
+        if self.volume_assembler is not None:
+            self.volume_assembler.assemble(weight, node_indes, shape_func_value, constitutive_law)
         if self.load_assembler is not None and load is not None:
             self.load_assembler.assemble(weight, node_indes, shape_func_value, load=load)
 

@@ -9,8 +9,9 @@ from pymfr.model.searcher import SupportNodeSearcher, SegmentLagrangleSupportNod
 from pymfr.shapefunc.shape_func import ShapeFunction, LinearShapeFuntion, SoloShapeFunction
 from pymfr.process.load import LoadCalculator, SimpLoadCalculator
 from pymfr.process.process import SimpProcessorCore, SimpAssemblersConsumer, LagrangleDirichletProcessorCore, \
-    SimpLagrangleDirichletConsumer, SimpProcessor
-from pymfr.process.assembler import VirtualLoadWorkAssembler, LagrangleDirichletLoadAssembler, PoissonVolumeAssembler
+    SimpLagrangleDirichletConsumer, SimpProcessor, SimpMechanicalVolumeProcessorCore, SimpMechanicalVolumeConsumer
+from pymfr.process.assembler import VirtualLoadWorkAssembler, LagrangleDirichletLoadAssembler, PoissonVolumeAssembler,\
+    MechanicalVolumeAssembler2D
 from pymfr.process.post import SimpPostProcessor
 
 
@@ -63,6 +64,50 @@ class SimpVolumeNeumannProcessorModule(Module):
             )
     def volume_process_consumer(self, volume_assembler, volume_load_assembler):
         return SimpAssemblersConsumer(volume_assembler, volume_load_assembler)
+    
+    @provides(VolumeLoadAssembler)
+    def volume_load_assembler(self):
+        return VirtualLoadWorkAssembler()
+    
+    @provides(NeumannProcessorCore)
+    @inject(support_node_searcher=SupportNodeSearcher,
+            shape_func=ShapeFunction,
+            load_calculator=LoadCalculator,
+            consumer=NeumannProcessConsumer,
+            )
+    def neumann_processor_core(self, **kwargs):
+        return SimpProcessorCore(**kwargs)
+    
+    @provides(NeumannProcessConsumer)
+    @inject(assembler=NeumannAssembler)
+    def neumann_process_consumer(self, assembler):
+        return SimpAssemblersConsumer(None, assembler)
+    
+    @provides(NeumannAssembler)
+    def neumann_assembler(self):
+        return VirtualLoadWorkAssembler()
+
+class SimpMechanicalVolumeNeumannProcessorModule2D(Module):
+    
+    @provides(VolumeProcessorCore)
+    @inject(support_node_searcher=SupportNodeSearcher,
+            shape_func=ShapeFunction,
+            load_calculator=LoadCalculator,
+            consumer=VolumeProcessConsumer,
+            )
+    def volume_processor_core(self, **kwargs):
+        return SimpMechanicalVolumeProcessorCore(**kwargs)
+    
+    @provides(VolumeProcessConsumer)
+    @inject(volume_assembler=VolumeAssembler,
+            volume_load_assembler=VolumeLoadAssembler
+            )
+    def volume_process_consumer(self, volume_assembler, volume_load_assembler):
+        return SimpMechanicalVolumeConsumer(volume_assembler, volume_load_assembler)
+    
+    @provides(VolumeAssembler)
+    def volume_assembler(self):
+        return MechanicalVolumeAssembler2D()
     
     @provides(VolumeLoadAssembler)
     def volume_load_assembler(self):
@@ -142,6 +187,11 @@ def get_simp_poission_processor_modules(spatial_dim=2):
     lags = {1:LagrangleCommon1D, 2:LagrangleCommon2D}
     ret.append(lags[spatial_dim])
     return ret
+
+def get_simp_mechanical_processor_modules_2d():
+    return [SimpProcessorModule,
+            SimpMechanicalVolumeNeumannProcessorModule2D,
+            LagrangleDirichletProcessorModule,LagrangleCommon2D]
 
 class SimpPostProcessorModule(Module):
     
