@@ -199,12 +199,12 @@ def _segment_unit_out(seg):
     vec = vec / np.linalg.norm(vec)
     return np.array((vec[1], -vec[0]), dtype=float)
 
-def linear_2d_exp(coord):
+def poisson_linear_2d_exp(coord):
     x = coord[0]
     y = coord[1]
     return np.array((x + 2 * y, 1, 2, 0, 0), dtype=float)
     
-def quadric_2d_exp(coord):
+def poisson_quadric_2d_exp(coord):
     x = coord[0]
     y = coord[1]
     u = 0.1 * x + 0.3 * y + 0.8 * x ** 2 + 1.2 * x * y + 0.6 * y ** 2
@@ -214,20 +214,20 @@ def quadric_2d_exp(coord):
     ddy = 1.2
     return np.array((u, dx, dy, ddx, ddy), dtype=float)
 
-def volume_load_core(exp_func):
+def poisson_volume_load_core(exp_func):
     def v(coord, bnd):
         exp = exp_func(coord)
         return ((-exp[3] - exp[4]).reshape(-1), None)
     return v
 
-def neumann_load_core(exp_func):
+def poisson_neumann_load_core(exp_func):
     def v(coord, bnd):
         exp = exp_func(coord)
         return (exp[1:3].dot(_segment_unit_out(bnd)).reshape(-1), None)
     
     return v
 
-def dirichlet_load_core(exp_func):
+def poisson_dirichlet_load_core(exp_func):
     def v(coord, bnd):
         exp = exp_func(coord)
         return (exp[0].reshape(-1), (True,))
@@ -282,16 +282,10 @@ def gen_regular_quadrangle_quadrature_units(xs, ys, quadrangle_cls=None):
 class PatchTestData:
     pass
 
-class Poisson2D:
-    cases = [{'exp_func':linear_2d_exp,
-            'order':1
-            },
-           {'exp_func':quadric_2d_exp,
-            'order':2
-            }
-           ]
+class PatchTest2D:
 
-    def __init__(self, case_index=1, segments=None, nodes=None,
+
+    def __init__(self, value_dim, case_index=1, segments=None, nodes=None,
                  volume_quadrature_units=None,
                  neumann_quadrature_units=None,
                  dirichlet_quadrature_units=None,
@@ -312,6 +306,9 @@ class Poisson2D:
         self.neumann_quadrature_units = neumann_quadrature_units
         self.dirichlet_quadrature_units = dirichlet_quadrature_units
         
+        self.value_dim = value_dim
+        self.spatial_dim = 2
+
     def gen_project_data(self):
         ret = PatchTestData()
         
@@ -319,10 +316,7 @@ class Poisson2D:
         exp_func = case_data['exp_func']
         order = case_data['order']
         ret.order = order
-        load_map = {'volume':volume_load_core(exp_func),
-                  'neumann':neumann_load_core(exp_func),
-                  'dirichlet':dirichlet_load_core(exp_func)
-                  }
+        load_map = self.gen_load_map(exp_func)
         ret.load_map = load_map
         
         for qu in self.volume_quadrature_units:
@@ -347,8 +341,8 @@ class Poisson2D:
         ret.nodes = self.nodes
         ret.dirichlet_nodes = self.get_dirichlet_nodes()
         ret.boundaries = self.segments
-        ret.value_dim = 1
-        ret.spatial_dim = 2
+        ret.value_dim = self.value_dim
+        ret.spatial_dim = self.spatial_dim
         
         return ret
     
@@ -359,7 +353,25 @@ class Poisson2D:
             coord = node.coord
             return ((coord <= upper).all() and (coord >= lower).all())
         return [node for node in self.nodes if f(node)]
+
+class Poisson2D(PatchTest2D):
+    cases = [{'exp_func':poisson_linear_2d_exp,
+            'order':1
+            },
+           {'exp_func':poisson_quadric_2d_exp,
+            'order':2
+            }
+           ]
     
+    def __init__(self):
+        super().__init__(1)
+        
+    def gen_load_map(self, exp_func):
+        load_map = {'volume':poisson_volume_load_core(exp_func),
+                    'neumann':poisson_neumann_load_core(exp_func),
+                    'dirichlet':poisson_dirichlet_load_core(exp_func)}
+        return load_map
+
 def get_twod_poisson_patch_injector():
     injector = Injector()
     modules = [MLSRKShapeFunctionModule, TwoDVisibleSupportNodeSearcherModule]
@@ -461,3 +473,4 @@ def _test_twod_poisson(case_index, error_lim=2e-2, nodes_num_per_dim=11, node_ra
     error = diff / np.abs(exps[:, 0]).max()
     
     ok_(error < error_lim)
+
