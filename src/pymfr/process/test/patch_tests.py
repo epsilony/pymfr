@@ -384,7 +384,7 @@ def test_twod_poisson():
     for case_index in range(len(Poisson2D.cases)):
         _test_twod_poisson(case_index)
 
-def _test_twod_poisson(case_index, error_lim=2e-2, nodes_num_per_dim=11, node_radius=0.4):
+def _test_twod_poisson(case_index, error_lim=2e-2, nodes_num_per_dim=5, node_radius=0.8):
  
     injector = get_twod_poisson_patch_injector()
     injector.binder.install(SimpPostProcessorModule)
