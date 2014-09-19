@@ -179,9 +179,9 @@ def _test_poisson_1d(case_index, error_lim, kernel_order, quadrature_degree, nod
     pp.shape_func.partial_order = 1
     
     yss = []
-    xs = np.linspace(0, 1).reshape((-1, 1))
+    xs = np.linspace(0, 1, 11).reshape((-1, 1))
     for x in xs:
-        yss.append(pp.process(x, None))
+        yss.extend(pp.process(x, None))
     
     yss = np.array(yss)
     
@@ -315,7 +315,7 @@ class PatchTest2D:
         case_data = self.cases[self.case_index]
         exp_func = case_data['exp_func']
         order = case_data['order']
-        ret.order = order
+        ret.__dict__.update(case_data)
         load_map = self.gen_load_map(exp_func)
         ret.load_map = load_map
         
@@ -462,7 +462,7 @@ def _test_twod_poisson(case_index, error_lim=2e-2, nodes_num_per_dim=5, node_rad
     yss = []
     xs = list(itertools.product(np.linspace(-1, 1), np.linspace(-1, 1)))
     for x in xs:
-        yss.append(pp.process(x, None))
+        yss.extend(pp.process(x, None))
     
     yss = np.array(yss)
     
