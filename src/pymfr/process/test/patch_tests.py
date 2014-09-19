@@ -8,7 +8,8 @@ from pymfr.model.raw_model import MFNode, OneDModel
 from injector import Injector
 from pymfr.shapefunc.injections import MLSRKShapeFunctionModule
 from pymfr.model.injections import OneDSupportNodesSearcherModule, TwoDVisibleSupportNodeSearcherModule
-from pymfr.process.injections import get_simp_poission_processor_modules, SimpPostProcessorModule
+from pymfr.process.injections import get_simp_poission_processor_modules, SimpPostProcessorModule, \
+    get_simp_mechanical_processor_modules_2d
 from pymfr.process.process import SimpProcessor
 from pymfr.process.quadrature import iter_quadrature_units, BilinearQuadrangleQuadratureUnit, SegmentQuadratureUnit
 from pymfr.misc.tools import search_setup_mixins, gen_setup_status
@@ -471,6 +472,259 @@ def _test_twod_poisson(case_index, error_lim=2e-2, nodes_num_per_dim=5, node_rad
     
     diff = np.abs(yss[:, 0] - exps[:, 0]).max()
     error = diff / np.abs(exps[:, 0]).max()
+    
+    ok_(error < error_lim)
+
+def mechanical_linear_2d(coord):
+    x = coord[0]
+    y = coord[1]
+    u = 0.1 * x + 0.3 * y
+    v = 0.2 * x + 0.4 * y
+    
+    u_x = 0.1
+    u_y = 0.3
+    
+    v_x = 0.2
+    v_y = 0.4
+    
+    ret = np.empty((6, 2))
+    ret[:, 0] = [u, u_x, u_y, 0, 0, 0]
+    ret[:, 1] = [v, v_x, v_y, 0, 0, 0]
+    
+    return ret
+
+def mechanical_quadric_2d(coord):
+    x = coord[0]
+    y = coord[1]
+    
+    u = 0.12 * x + 0.14 * y + 0.16 * x ** 2 + 0.18 * x * y + 0.20 * y ** 2
+    v = 0.11 * x + 0.13 * y + 0.15 * x ** 2 + 0.10 * x * y + 0.21 * y ** 2
+    
+    u_x = 0.12 + 0.32 * x + 0.18 * y
+    u_y = 0.14 + 0.18 * x + 0.40 * y
+    
+    u_xx = 0.32
+    u_xy = 0.18
+    u_yy = 0.40
+    
+    v_x = 0.11 + 0.30 * x + 0.10 * y
+    v_y = 0.13 + 0.10 * x + 0.42 * y
+    
+    v_xx = 0.30
+    v_xy = 0.10
+    v_yy = 0.42
+    
+    ret = np.empty((6, 2), dtype=float)
+    ret[:, 0] = [u, u_x, u_y, u_xx, u_xy, u_yy]
+    ret[:, 1] = [v, v_x, v_y, v_xx, v_xy, v_yy]
+    return ret
+
+def strain_2d(uvs):
+    ret = np.empty((3, uvs.shape[1] / 2))
+    u_x = uvs[1, ::2]
+    u_y = uvs[2, ::2]
+    v_x = uvs[1, 1::2]
+    v_y = uvs[2, 1::2]
+    ret[0, :] = u_x
+    ret[1, :] = v_y
+    ret[2, :] = u_y + v_x
+    return ret
+
+def strain_2d_diff_x(uvs):
+    ret = np.empty((3, uvs.shape[1] / 2))
+    u_xx = uvs[3, ::2]
+    u_xy = uvs[4, ::2]
+    v_xy = uvs[4, 1::2]
+    v_xx = uvs[3, 1::2]
+    ret[0, :] = u_xx
+    ret[1, :] = v_xy
+    ret[2, :] = u_xy + v_xx
+    return ret
+
+def strain_2d_diff_y(uvs):
+    ret = np.empty((3, uvs.shape[1] / 2))
+    u_xy = uvs[4, ::2]
+    v_yy = uvs[5, 1::2]
+    v_xy = uvs[4, 1::2]
+    u_yy = uvs[5, ::2]
+    ret[0, :] = u_xy
+    ret[1, :] = v_yy
+    ret[2, :] = u_yy + v_xy
+    return ret
+
+def plane_stress_constitutive_law(modulus, ratio):
+    E = modulus
+    nu = ratio
+    return E / (1 - nu ** 2) * np.array([[1, nu, 0], [nu, 1, 0], [0, 0, (1 - nu) / 2]], dtype=float)
+    
+
+def mechanical_volume_load_core(exp_func, constitutive_law):
+    def load_core(coord, bnd):
+        uv = exp_func(coord)
+        stress_dx = constitutive_law.dot(strain_2d_diff_x(uv)).reshape(-1)
+        stress_dy = constitutive_law.dot(strain_2d_diff_y(uv)).reshape(-1)
+        
+        b_x = -stress_dx[0] - stress_dy[2]
+        b_y = -stress_dx[2] - stress_dy[1]
+        
+        return (np.array((b_x, b_y), dtype=float), None)
+    
+    return load_core
+
+def mechanical_neumann_load_core(exp_func, constitutive_law):
+    def load_core(coord, bnd):
+        uv = exp_func(coord)
+        unit_out = _segment_unit_out(bnd)
+        strain = strain_2d(uv)
+        stress = constitutive_law.dot(strain).reshape(-1)
+        fx = stress[0] * unit_out[0] + stress[2] * unit_out[1]
+        fy = stress[1] * unit_out[1] + stress[2] * unit_out[0]
+        return (np.array([fx, fy], dtype=float), None)
+    
+    return load_core
+
+def mechanical_dirichlet_load_core(exp_func):
+    def load_core(coord, bnd):
+        load = exp_func(coord)[0]
+        load_validity = [True, True]
+        return load, load_validity
+    
+    return load_core
+
+class Mechanical2D(PatchTest2D):
+    constitutive_law = plane_stress_constitutive_law(100, 0.3)
+    cases = [{'exp_func':mechanical_linear_2d,
+              'constitutive_law':constitutive_law,
+            'order':1
+            },
+           {'exp_func':mechanical_quadric_2d,
+            'order':2,
+            'constitutive_law':constitutive_law
+            }
+           ]
+    
+    def __init__(self):
+        super().__init__(1)
+        self.value_dim = 2
+    
+    def gen_project_data(self):
+        ret = super().gen_project_data()
+        ret.constitutive_law_func = lambda coord:self.get_constitutive_law()
+        return ret
+
+    def get_constitutive_law(self):
+        constitutive_law = self.cases[self.case_index]['constitutive_law']
+        return constitutive_law
+
+    def gen_load_map(self, exp_func):
+        constitutive_law = self.get_constitutive_law()
+        load_map = {'volume':mechanical_volume_load_core(exp_func, constitutive_law),
+                    'neumann':mechanical_neumann_load_core(exp_func, constitutive_law),
+                    'dirichlet':mechanical_dirichlet_load_core(exp_func)}
+        return load_map
+    
+
+def get_twod_mechanical_patch_injector():
+    injector = Injector()
+    modules = [MLSRKShapeFunctionModule, TwoDVisibleSupportNodeSearcherModule]
+    modules.extend(get_simp_mechanical_processor_modules_2d())
+    for mod in modules:
+        injector.binder.install(mod)
+    return injector
+
+def test_twod_mechanical():
+    for case_index in range(len(Mechanical2D.cases)):
+        _test_twod_mechanical(case_index)
+
+def _test_twod_mechanical(case_index, error_lim=3e-2, nodes_num_per_dim=5, node_radius=0.8):
+ 
+    injector = get_twod_mechanical_patch_injector()
+    injector.binder.install(SimpPostProcessorModule)
+    processor = injector.get(SimpProcessor)
+    p2d = Mechanical2D()
+    p2d.case_index = case_index
+    xs = np.linspace(-1, 1, nodes_num_per_dim)
+    ys = np.linspace(-1, 1, nodes_num_per_dim)
+    nodes, segments = gen_regular_nodes_segs(xs, ys)
+    p2d.nodes = nodes
+    p2d.segments = segments
+    
+    p2d.volume_quadrature_units = gen_regular_quadrangle_quadrature_units(xs, ys)
+    
+    ptd = p2d.gen_project_data()
+    spatial_dim = ptd.spatial_dim
+    value_dim = ptd.value_dim
+    
+    nodes = ptd.nodes
+    
+    for i, node in enumerate(nodes):
+        node.index = i
+    
+    lagrangle_nodes = ptd.dirichlet_nodes
+    for li, ln in enumerate(lagrangle_nodes, len(nodes)):
+        ln.lagrangle_index = li
+    
+    lagrangle_nodes_size = len(lagrangle_nodes)
+    
+    node_coords = np.empty((len(nodes) + lagrangle_nodes_size, spatial_dim), dtype=float)
+    for node in nodes:
+        node_coords[node.index] = node.coord
+    
+    for ln in lagrangle_nodes:
+        node_coords[ln.lagrangle_index] = ln.coord
+    
+    nodes_num = len(nodes)
+    vector_size = (nodes_num + lagrangle_nodes_size) * value_dim
+    
+    common_data = {}
+    common_data.update(ptd.__dict__)
+    
+    for name in 'volume neumann dirichlet'.split():
+        qus = common_data[name + '_quadrature_units']
+        common_data[name + '_quadrature_points'] = iter_quadrature_units(qus)
+    
+    common_data.update({'vector':np.zeros(vector_size, dtype=float),
+                 'matrix':np.zeros((vector_size, vector_size), dtype=float),
+                 'lagrangle_nodes_size':lagrangle_nodes_size,
+                 'node_coords':node_coords,
+                 'node_radiuses':node_radius * np.ones(len(ptd.nodes)),
+                 'kernel_order':ptd.order,
+                 'segments':ptd.boundaries
+                 })
+    
+    for s in search_setup_mixins(processor):
+        s.setup(**common_data)
+    
+    # ss = gen_setup_status(processor)
+    
+    processor.process()
+
+    matrix = common_data['matrix']
+    vector = common_data['vector']
+    
+    res = np.linalg.solve(matrix, vector)
+    
+    common_data['node_values'] = res
+    
+    pp = injector.get(SimpPostProcessor)
+    
+    for s in search_setup_mixins(pp):
+        s.setup(**common_data)
+    
+    yss = []
+    xs = list(itertools.product(np.linspace(-1, 1, 11), np.linspace(-1, 1, 11)))
+    for x in xs:
+        yss.extend(pp.process(x, None))
+    
+    yss = np.array(yss)
+    
+    exp_func = p2d.cases[p2d.case_index]['exp_func']
+    exps = []
+    for x in xs:
+        exps.extend(exp_func(x).T)
+    exps = np.array(exps)
+    diff = yss[:, 0] - exps[:, 0]
+    error = np.abs(diff).max() / np.abs(exps[:, 0]).max()
     
     ok_(error < error_lim)
 
